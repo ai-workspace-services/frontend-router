@@ -1,0 +1,30 @@
+{
+  "name": "frontend-router",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloudflare Worker ingress for Console static assets, SSR boundaries, and same-origin API proxying.",
+  "type": "module",
+  "engines": {
+    "node": ">=22 <27"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test"
+  },
+  "keywords": [
+    "cloudflare-worker",
+    "frontend-router",
+    "opennext",
+    "serverless"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260817.1",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10",
+    "wrangler": "4.123.0"
+  }
+}

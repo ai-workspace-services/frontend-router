@@ -1,0 +1,32 @@
+# Frontend Router
+
+`frontend-router` is the Cloudflare Worker ingress for `console.svc.plus`. It is deliberately separate from [`edge-gateway`](https://github.com/ai-workspace-services/edge-gateway): this Worker owns frontend dispatch, while `edge-gateway` owns API authentication, service routing, CORS, and Cloud Run failover.
+
+## Request ownership
+
+| Request | Target |
+| --- | --- |
+| `/_next/*`, `/static/*`, `/assets/*`, static documents and media | Cloudflare Pages through `PAGES_ORIGIN` |
+| `/api/*` | Accounts Edge Gateway through `API_ORIGIN` |
+| Auth pages | `SSR_AUTH` Service Binding |
+| Content pages | `SSR_CONTENT` Service Binding |
+| Console pages | `SSR_CONSOLE` Service Binding |
+| Workspace pages | `SSR_WORKSPACE` Service Binding |
+| Other UI pages | `SSR_PUBLIC` Service Binding |
+
+The complete environment and migration contract is documented in [Console Frontend Router 与 Edge Gateway 目标架构及实施计划](https://github.com/ai-workspace-services/knowledge/blob/main/docs/zh/frontend-edge-routing-target-architecture.md).
+
+## Local development
+
+```bash
+cp .dev.vars.example .dev.vars
+npm install
+npm run check
+npm run dev
+```
+
+`wrangler.toml` intentionally contains no production domain, Worker name suffix, origin, or Service Binding. The platform orchestrator must render them from GitOps at deployment time.
+
+## Deployment boundary
+
+Do not manually attach `console.svc.plus` to this Worker before the GitOps frontend-router contract and UAT canary are ready. Pages currently owns the Console custom domain; the migration must first deploy this Worker to a temporary UAT hostname and verify the static, SSR, API, and Cookie acceptance matrix.
