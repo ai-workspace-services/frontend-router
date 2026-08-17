@@ -1,0 +1,10 @@
+name = "frontend-router"
+main = "src/index.ts"
+compatibility_date = "2026-08-18"
+compatibility_flags = ["nodejs_compat"]
+
+# Environment-specific names, Custom Domains, origins, and Service Bindings are
+# rendered from GitOps during deployment. Do not hard-code them in this file.
+
+[observability]
+enabled = true
