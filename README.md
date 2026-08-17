@@ -27,6 +27,13 @@ npm run dev
 
 `wrangler.toml` intentionally contains no production domain, Worker name suffix, origin, or Service Binding. The platform orchestrator must render them from GitOps at deployment time.
 
+## GitOps deployment
+
+`scripts/deploy_from_gitops.sh` is the only deployment entrypoint. It reads the rendered
+`EdgeRoutingConfig` from `FRONTEND_ROUTER_CONFIG_FILE`, generates a temporary Wrangler config
+with the five SSR Service Bindings, and deploys the named Worker. It deliberately does **not**
+attach a Custom Domain; `platform-ops-toolkit` owns that later reconciliation step.
+
 ## Deployment boundary
 
 Do not manually attach `console.svc.plus` to this Worker before the GitOps frontend-router contract and UAT canary are ready. Pages currently owns the Console custom domain; the migration must first deploy this Worker to a temporary UAT hostname and verify the static, SSR, API, and Cookie acceptance matrix.

@@ -11,8 +11,9 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "test": "vitest run",
+    "test:deploy-contract": "bash test/deploy_from_gitops.test.sh",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test && npm run test:deploy-contract"
   },
   "keywords": [
     "cloudflare-worker",
