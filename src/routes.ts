@@ -8,6 +8,13 @@ const AUTH_PREFIXES = ['/login', '/register', '/email-verification', '/logout'] 
 const CONTENT_PREFIXES = ['/blogs', '/docs', '/download'] as const;
 const CONSOLE_PREFIXES = ['/panel', '/dashboard'] as const;
 const WORKSPACE_PREFIXES = ['/ai-workspace', '/cloud_iac', '/editor', '/support', '/xworkmate'] as const;
+const BOUNDARY_ASSET_ROUTES: ReadonlyArray<readonly [string, FrontendRoute]> = [
+  ['/_edge/auth', 'ssr-auth'],
+  ['/_edge/content', 'ssr-content'],
+  ['/_edge/console', 'ssr-console'],
+  ['/_edge/workspace', 'ssr-workspace'],
+  ['/_edge/public', 'ssr-public'],
+];
 
 function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -26,6 +33,8 @@ export function isStaticAsset(pathname: string): boolean {
 }
 
 export function routeForPath(pathname: string): FrontendRoute {
+  const boundaryRoute = BOUNDARY_ASSET_ROUTES.find(([prefix]) => matchesPrefix(pathname, prefix));
+  if (boundaryRoute) return boundaryRoute[1];
   if (isStaticAsset(pathname)) return 'static';
   if (matchesPrefix(pathname, '/api')) return 'api';
   if (matchesAnyPrefix(pathname, AUTH_PREFIXES)) return 'ssr-auth';

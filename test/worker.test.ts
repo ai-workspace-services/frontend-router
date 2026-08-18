@@ -32,6 +32,18 @@ describe('frontend-router worker', () => {
     expect(forwarded.headers.get('X-Forwarded-Host')).toBe('console.example.test');
   });
 
+  it('sends boundary-prefixed build assets back to the owning SSR binding', async () => {
+    const runtime = env();
+    const response = await worker.fetch(
+      new Request('https://console.example.test/_edge/public/_next/static/chunks/app.css'),
+      runtime,
+    );
+
+    expect(await response.text()).toBe('public');
+    expect(response.headers.get('X-Frontend-Route')).toBe('ssr-public');
+    expect(runtime.SSR_PUBLIC?.fetch).toHaveBeenCalledOnce();
+  });
+
   it('proxies API requests through the configured Accounts gateway origin', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('gateway'));
     const response = await worker.fetch(
