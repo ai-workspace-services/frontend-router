@@ -5,6 +5,7 @@ export interface WorkerServiceBinding {
 export interface Env {
   PAGES_ORIGIN?: string;
   API_ORIGIN?: string;
+  API_AUTH?: WorkerServiceBinding;
   SSR_AUTH?: WorkerServiceBinding;
   SSR_CONTENT?: WorkerServiceBinding;
   SSR_CONSOLE?: WorkerServiceBinding;
@@ -15,6 +16,7 @@ export interface Env {
 export type FrontendRoute =
   | 'static'
   | 'api'
+  | 'api-auth'
   | 'ssr-auth'
   | 'ssr-content'
   | 'ssr-console'
