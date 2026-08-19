@@ -5,6 +5,10 @@ const STATIC_DOCUMENTS = new Set(['/favicon.ico', '/robots.txt', '/sitemap.xml']
 const STATIC_EXTENSION = /\.(?:avif|css|gif|ico|jpe?g|js|map|png|svg|txt|webp|woff2?|xml)$/i;
 
 const AUTH_PREFIXES = ['/login', '/register', '/email-verification', '/logout'] as const;
+// Console auth endpoints are Next BFF routes owned by the auth SSR boundary.
+// Keep these ahead of the generic /api/* route so they are not sent to the
+// Accounts edge gateway's core boundary.
+const AUTH_API_PREFIXES = ['/api/auth', '/api/v1/auth'] as const;
 const CONTENT_PREFIXES = ['/blogs', '/docs', '/download'] as const;
 const CONSOLE_PREFIXES = ['/panel', '/dashboard'] as const;
 const WORKSPACE_PREFIXES = ['/ai-workspace', '/cloud_iac', '/editor', '/support', '/xworkmate'] as const;
@@ -35,6 +39,7 @@ export function isStaticAsset(pathname: string): boolean {
 export function routeForPath(pathname: string): FrontendRoute {
   const boundaryRoute = BOUNDARY_ASSET_ROUTES.find(([prefix]) => matchesPrefix(pathname, prefix));
   if (boundaryRoute) return boundaryRoute[1];
+  if (matchesAnyPrefix(pathname, AUTH_API_PREFIXES)) return 'ssr-auth';
   if (isStaticAsset(pathname)) return 'static';
   if (matchesPrefix(pathname, '/api')) return 'api';
   if (matchesAnyPrefix(pathname, AUTH_PREFIXES)) return 'ssr-auth';

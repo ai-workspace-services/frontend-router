@@ -44,17 +44,31 @@ describe('frontend-router worker', () => {
     expect(runtime.SSR_PUBLIC?.fetch).toHaveBeenCalledOnce();
   });
 
-  it('proxies API requests through the configured Accounts gateway origin', async () => {
+  it('dispatches Console auth API requests to the auth SSR binding', async () => {
+    const runtime = env();
+    const response = await worker.fetch(
+      new Request('https://console.example.test/api/auth/login', { method: 'POST', body: '{}' }),
+      runtime,
+    );
+
+    expect(await response.text()).toBe('auth');
+    expect(response.headers.get('X-Frontend-Route')).toBe('ssr-auth');
+    expect(runtime.SSR_AUTH?.fetch).toHaveBeenCalledOnce();
+    const forwarded = vi.mocked(runtime.SSR_AUTH!.fetch).mock.calls[0][0];
+    expect(forwarded.headers.get('X-Frontend-Route')).toBe('ssr-auth');
+  });
+
+  it('proxies non-auth API requests through the configured Accounts gateway origin', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('gateway'));
     const response = await worker.fetch(
-      new Request('https://console.example.test/api/auth/login?redirect=%2Fpanel', { method: 'POST', body: '{}' }),
+      new Request('https://console.example.test/api/users', { method: 'GET' }),
       env(),
     );
 
     expect(await response.text()).toBe('gateway');
     expect(response.headers.get('X-Frontend-Route')).toBe('api');
     const forwarded = fetchMock.mock.calls[0][0] as Request;
-    expect(forwarded.url).toBe('https://accounts.example.test/api/auth/login?redirect=%2Fpanel');
+    expect(forwarded.url).toBe('https://accounts.example.test/api/users');
     expect(forwarded.headers.get('X-Frontend-Route')).toBe('api');
     fetchMock.mockRestore();
   });
