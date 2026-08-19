@@ -91,6 +91,11 @@ async function dispatch(request: Request, env: Env, route: FrontendRoute, reques
     return fetch(requestForOrigin(request, env.API_ORIGIN, requestId, route));
   }
 
+  if (route === 'api-auth') {
+    if (!env.API_AUTH) return jsonError('API auth binding is not configured', 500, requestId);
+    return env.API_AUTH.fetch(requestWithRouterHeaders(request, requestId, route));
+  }
+
   const binding = bindingForRoute(env, route);
   if (!binding) return jsonError(`Service binding for ${route} is not configured`, 500, requestId);
   return binding.fetch(requestWithRouterHeaders(request, requestId, route));

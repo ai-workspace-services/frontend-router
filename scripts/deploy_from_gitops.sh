@@ -38,6 +38,7 @@ jq -n \
   --arg name "${worker_name}" \
   --arg pages_origin "${pages_origin}" \
   --arg api_origin "${api_origin}" \
+  --arg api_auth "$(jq -er '.spec.serverless.frontend_router.bindings.api_auth' "${CONFIG_FILE}")" \
   --arg auth "$(jq -er '.spec.serverless.frontend_router.bindings.auth' "${CONFIG_FILE}")" \
   --arg content "$(jq -er '.spec.serverless.frontend_router.bindings.content' "${CONFIG_FILE}")" \
   --arg console "$(jq -er '.spec.serverless.frontend_router.bindings.console' "${CONFIG_FILE}")" \
@@ -53,6 +54,7 @@ jq -n \
       API_ORIGIN: $api_origin
     },
     services: [
+      {binding: "API_AUTH", service: $api_auth},
       {binding: "SSR_AUTH", service: $auth},
       {binding: "SSR_CONTENT", service: $content},
       {binding: "SSR_CONSOLE", service: $console},

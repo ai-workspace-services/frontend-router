@@ -20,6 +20,7 @@ cat >"${test_dir}/routing.json" <<'EOF'
         "pages_origin": "https://ai-workspace-portal-uat.pages.dev",
         "api_origin": "https://accounts-cloudflare-uat.onwalk.net",
         "bindings": {
+          "api_auth": "edge-gateway-auth-uat",
           "auth": "frontend-ssr-auth-uat",
           "content": "frontend-ssr-content-uat",
           "console": "frontend-ssr-console-uat",
@@ -56,7 +57,7 @@ jq -e '
   .name == "frontend-router-uat"
   and .vars.PAGES_ORIGIN == "https://ai-workspace-portal-uat.pages.dev"
   and .vars.API_ORIGIN == "https://accounts-cloudflare-uat.onwalk.net"
-  and ([.services[].binding] | sort) == ["SSR_AUTH", "SSR_CONSOLE", "SSR_CONTENT", "SSR_PUBLIC", "SSR_WORKSPACE"]
+  and ([.services[].binding] | sort) == ["API_AUTH", "SSR_AUTH", "SSR_CONSOLE", "SSR_CONTENT", "SSR_PUBLIC", "SSR_WORKSPACE"]
 ' "${test_dir}/wrangler.json" >/dev/null
 
 echo "deploy_from_gitops.test: PASS"

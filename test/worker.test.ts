@@ -11,6 +11,7 @@ function env(overrides: Partial<Env> = {}): Env {
   return {
     PAGES_ORIGIN: 'https://portal.pages.dev',
     API_ORIGIN: 'https://accounts.example.test',
+    API_AUTH: binding(new Response('api-auth')),
     SSR_AUTH: binding(new Response('auth')),
     SSR_CONTENT: binding(new Response('content')),
     SSR_CONSOLE: binding(new Response('console')),
@@ -44,18 +45,28 @@ describe('frontend-router worker', () => {
     expect(runtime.SSR_PUBLIC?.fetch).toHaveBeenCalledOnce();
   });
 
-  it('dispatches Console auth API requests to the auth SSR binding', async () => {
+  it('dispatches Console auth API requests to the Accounts auth gateway binding', async () => {
     const runtime = env();
     const response = await worker.fetch(
       new Request('https://console.example.test/api/auth/login', { method: 'POST', body: '{}' }),
       runtime,
     );
 
-    expect(await response.text()).toBe('auth');
-    expect(response.headers.get('X-Frontend-Route')).toBe('ssr-auth');
-    expect(runtime.SSR_AUTH?.fetch).toHaveBeenCalledOnce();
-    const forwarded = vi.mocked(runtime.SSR_AUTH!.fetch).mock.calls[0][0];
-    expect(forwarded.headers.get('X-Frontend-Route')).toBe('ssr-auth');
+    expect(await response.text()).toBe('api-auth');
+    expect(response.headers.get('X-Frontend-Route')).toBe('api-auth');
+    expect(runtime.API_AUTH?.fetch).toHaveBeenCalledOnce();
+    const forwarded = vi.mocked(runtime.API_AUTH!.fetch).mock.calls[0][0];
+    expect(forwarded.headers.get('X-Frontend-Route')).toBe('api-auth');
+  });
+
+  it('returns a configuration error when the auth gateway binding is missing', async () => {
+    const response = await worker.fetch(
+      new Request('https://console.example.test/api/auth/login'),
+      env({ API_AUTH: undefined }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({ error: 'API auth binding is not configured' });
   });
 
   it('proxies non-auth API requests through the configured Accounts gateway origin', async () => {

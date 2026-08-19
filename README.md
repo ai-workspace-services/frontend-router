@@ -7,7 +7,7 @@
 | Request | Target |
 | --- | --- |
 | `/_next/*`, `/static/*`, `/assets/*`, static documents and media | Cloudflare Pages through `PAGES_ORIGIN` |
-| `/api/auth/*`, `/api/v1/auth/*` on the Console domain | `SSR_AUTH` Service Binding (Console Next BFF) |
+| `/api/auth/*`, `/api/v1/auth/*` on the Console domain | `API_AUTH` Service Binding (`edge-gateway-auth`) |
 | Other `/api/*` requests | Accounts Edge Gateway through `API_ORIGIN` |
 | Auth pages | `SSR_AUTH` Service Binding |
 | Content pages | `SSR_CONTENT` Service Binding |
