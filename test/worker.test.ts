@@ -124,4 +124,32 @@ describe('frontend-router worker', () => {
     expect(await response.json()).toMatchObject({ error: 'API origin is not configured' });
     expect(runtime.SSR_PUBLIC?.fetch).not.toHaveBeenCalled();
   });
+
+  it('redirects /dashboard and /dashboard/ to /panel with 301', async () => {
+    const response = await worker.fetch(new Request('https://console.example.test/dashboard?foo=bar'), env());
+
+    expect(response.status).toBe(301);
+    expect(response.headers.get('Location')).toBe('https://console.example.test/panel?foo=bar');
+  });
+
+  it('enriches static responses with immutable Cache-Control when upstream returns weak cache', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('image data', {
+        status: 200,
+        headers: { 'Cache-Control': 'public, max-age=0, must-revalidate' },
+      }),
+    );
+    try {
+      const response = await worker.fetch(
+        new Request('https://console.example.test/marketing/logo.svg'),
+        env(),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+      expect(response.headers.get('X-Frontend-Route')).toBe('static');
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
 });
