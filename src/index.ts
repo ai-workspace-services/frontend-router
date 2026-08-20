@@ -105,7 +105,27 @@ async function dispatch(
   if (route === 'static') {
     const origin = staticOrigin || env.PAGES_ORIGIN;
     if (!origin) return jsonError('Pages origin is not configured', 500, requestId);
-    return fetch(requestForOrigin(request, origin, requestId, route));
+    const originRequest = requestForOrigin(request, origin, requestId, route);
+    const response = await fetch(originRequest, {
+      cf: {
+        cacheEverything: true,
+        cacheTtl: 31536000,
+      },
+    } as RequestInit);
+
+    if (response.ok) {
+      const currentCacheControl = response.headers.get('Cache-Control');
+      if (!currentCacheControl || currentCacheControl.includes('max-age=0') || currentCacheControl.includes('no-cache')) {
+        const headers = new Headers(response.headers);
+        headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
+    }
+    return response;
   }
 
   if (route === 'api') {
@@ -126,7 +146,14 @@ async function dispatch(
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const requestId = requestIdFor(request);
-    const { pathname } = new URL(request.url);
+    const url = new URL(request.url);
+    const { pathname } = url;
+
+    if (pathname === '/dashboard' || pathname === '/dashboard/') {
+      url.pathname = '/panel';
+      return Response.redirect(url.toString(), 301);
+    }
+
     const staticOrigin = staticOriginFor(env, pathname);
     const route = staticOrigin ? 'static' : routeForPath(pathname);
 
