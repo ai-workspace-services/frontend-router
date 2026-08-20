@@ -20,6 +20,20 @@ const BOUNDARY_ASSET_ROUTES: ReadonlyArray<readonly [string, FrontendRoute]> = [
   ['/_edge/public', 'ssr-public'],
 ];
 
+// Content sections that can be served as a prebuilt static site instead of by
+// an SSR boundary. Order matters only for readability: the prefixes are
+// disjoint.
+export const STATIC_SECTIONS = ['blogs', 'docs', 'products', 'support'] as const;
+
+export type StaticSection = (typeof STATIC_SECTIONS)[number];
+
+const STATIC_SECTION_PREFIXES: ReadonlyArray<readonly [string, StaticSection]> = [
+  ['/blogs', 'blogs'],
+  ['/docs', 'docs'],
+  ['/products', 'products'],
+  ['/support', 'support'],
+];
+
 function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
@@ -34,6 +48,16 @@ export function isStaticAsset(pathname: string): boolean {
     STATIC_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
     STATIC_EXTENSION.test(pathname)
   );
+}
+
+/**
+ * The content section a path belongs to, or undefined when it belongs to none.
+ * Whether that section is actually served statically depends on its origin
+ * being configured; see `staticOriginFor` in index.ts.
+ */
+export function staticSectionForPath(pathname: string): StaticSection | undefined {
+  if (matchesAnyPrefix(pathname, ['/api', '/_edge', '/_next'])) return undefined;
+  return STATIC_SECTION_PREFIXES.find(([prefix]) => matchesPrefix(pathname, prefix))?.[1];
 }
 
 export function routeForPath(pathname: string): FrontendRoute {

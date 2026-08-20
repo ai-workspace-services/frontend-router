@@ -1,4 +1,4 @@
-import { routeForPath } from './routes';
+import { routeForPath, staticSectionForPath, type StaticSection } from './routes';
 import type { Env, FrontendRoute, WorkerServiceBinding } from './types';
 
 const HOP_BY_HOP_HEADERS = ['connection', 'content-length', 'host', 'keep-alive', 'transfer-encoding'];
@@ -80,10 +80,32 @@ function bindingForRoute(env: Env, route: FrontendRoute): WorkerServiceBinding |
   }
 }
 
-async function dispatch(request: Request, env: Env, route: FrontendRoute, requestId: string): Promise<Response> {
+/**
+ * Origin for a content section that is published as a prebuilt static site.
+ *
+ * Returns undefined when the section has no origin configured, which leaves the
+ * path on its SSR boundary. Each section reads its own variable, so one can be
+ * moved to its own Pages project — and republished on its own cadence — without
+ * touching the others or the main site.
+ */
+function staticOriginFor(env: Env, pathname: string): string | undefined {
+  const section = staticSectionForPath(pathname);
+  if (!section) return undefined;
+  const key = `PAGES_ORIGIN_${section.toUpperCase() as Uppercase<StaticSection>}` as const;
+  return env[key]?.trim() || undefined;
+}
+
+async function dispatch(
+  request: Request,
+  env: Env,
+  route: FrontendRoute,
+  requestId: string,
+  staticOrigin?: string,
+): Promise<Response> {
   if (route === 'static') {
-    if (!env.PAGES_ORIGIN) return jsonError('Pages origin is not configured', 500, requestId);
-    return fetch(requestForOrigin(request, env.PAGES_ORIGIN, requestId, route));
+    const origin = staticOrigin || env.PAGES_ORIGIN;
+    if (!origin) return jsonError('Pages origin is not configured', 500, requestId);
+    return fetch(requestForOrigin(request, origin, requestId, route));
   }
 
   if (route === 'api') {
@@ -104,10 +126,12 @@ async function dispatch(request: Request, env: Env, route: FrontendRoute, reques
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const requestId = requestIdFor(request);
-    const route = routeForPath(new URL(request.url).pathname);
+    const { pathname } = new URL(request.url);
+    const staticOrigin = staticOriginFor(env, pathname);
+    const route = staticOrigin ? 'static' : routeForPath(pathname);
 
     try {
-      const response = await dispatch(request, env, route, requestId);
+      const response = await dispatch(request, env, route, requestId, staticOrigin);
       return responseWithRouteHeaders(response, route, requestId);
     } catch (error) {
       console.error(`frontend-router request failed (${route})`, error);

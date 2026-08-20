@@ -34,11 +34,25 @@ fi
 generated_config="$(mktemp "${PWD}/.wrangler.frontend-router.XXXXXX.json")"
 trap 'rm -f "${generated_config}"' EXIT
 
+# Per-section static origins. GitOps declares
+# `frontend_router.static_sections.<section>` for every content section that is
+# published as a prebuilt site; a section that is absent stays on its SSR
+# boundary, which is both the rollout switch and the rollback. Declaring a
+# different origin per section is what lets them be published independently.
+static_section_vars="$(jq -c '
+  (.spec.serverless.frontend_router.static_sections // {})
+  | to_entries
+  | map(select(.value | type == "string" and (. | length) > 0))
+  | map({key: ("PAGES_ORIGIN_" + (.key | ascii_upcase)), value: .value})
+  | from_entries
+' "${CONFIG_FILE}")"
+
 jq -n \
   --arg name "${worker_name}" \
   --arg pages_origin "${pages_origin}" \
   --arg api_origin "${api_origin}" \
   --arg api_auth "$(jq -er '.spec.serverless.frontend_router.bindings.api_auth' "${CONFIG_FILE}")" \
+  --argjson static_sections "${static_section_vars}" \
   --arg auth "$(jq -er '.spec.serverless.frontend_router.bindings.auth' "${CONFIG_FILE}")" \
   --arg content "$(jq -er '.spec.serverless.frontend_router.bindings.content' "${CONFIG_FILE}")" \
   --arg console "$(jq -er '.spec.serverless.frontend_router.bindings.console' "${CONFIG_FILE}")" \
@@ -49,10 +63,10 @@ jq -n \
     main: "src/index.ts",
     compatibility_date: "2026-08-18",
     compatibility_flags: ["nodejs_compat"],
-    vars: {
+    vars: ({
       PAGES_ORIGIN: $pages_origin,
       API_ORIGIN: $api_origin
-    },
+    } + $static_sections),
     services: [
       {binding: "API_AUTH", service: $api_auth},
       {binding: "SSR_AUTH", service: $auth},
