@@ -5,6 +5,8 @@ export interface WorkerServiceBinding {
 export interface Env {
   PAGES_ORIGIN?: string;
   API_ORIGIN?: string;
+  STATIC_CACHE_TTL?: string;
+  PUBLIC_CACHE_TTL?: string;
   API_AUTH?: WorkerServiceBinding;
   // One origin per content section. A section is served from its origin only
   // when the origin is set, so an unset variable keeps the section on its SSR

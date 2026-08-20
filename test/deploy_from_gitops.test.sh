@@ -19,6 +19,8 @@ cat >"${test_dir}/routing.json" <<'EOF'
         "host": "console-cloudflare-uat.onwalk.net",
         "pages_origin": "https://ai-workspace-portal-uat.pages.dev",
         "api_origin": "https://accounts-cloudflare-uat.onwalk.net",
+        "static_cache_ttl": 604800,
+        "public_cache_ttl": 3600,
         "static_sections": {
           "blogs": "https://ai-workspace-portal-uat.pages.dev",
           "docs": "https://ai-workspace-docs-uat.pages.dev",
@@ -62,6 +64,8 @@ jq -e '
   .name == "frontend-router-uat"
   and .vars.PAGES_ORIGIN == "https://ai-workspace-portal-uat.pages.dev"
   and .vars.API_ORIGIN == "https://accounts-cloudflare-uat.onwalk.net"
+  and .vars.STATIC_CACHE_TTL == "604800"
+  and .vars.PUBLIC_CACHE_TTL == "3600"
   and ([.services[].binding] | sort) == ["API_AUTH", "SSR_AUTH", "SSR_CONSOLE", "SSR_CONTENT", "SSR_PUBLIC", "SSR_WORKSPACE"]
 ' "${test_dir}/wrangler.json" >/dev/null
 
