@@ -95,6 +95,12 @@ function staticOriginFor(env: Env, pathname: string): string | undefined {
   return env[key]?.trim() || undefined;
 }
 
+function parseTtlSeconds(value: string | undefined, defaultSeconds: number): number {
+  if (!value) return defaultSeconds;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultSeconds;
+}
+
 async function dispatch(
   request: Request,
   env: Env,
@@ -105,11 +111,12 @@ async function dispatch(
   if (route === 'static') {
     const origin = staticOrigin || env.PAGES_ORIGIN;
     if (!origin) return jsonError('Pages origin is not configured', 500, requestId);
+    const ttl = parseTtlSeconds(env.STATIC_CACHE_TTL, 604800);
     const originRequest = requestForOrigin(request, origin, requestId, route);
     const response = await fetch(originRequest, {
       cf: {
         cacheEverything: true,
-        cacheTtl: 604800,
+        cacheTtl: ttl,
       },
     } as RequestInit);
 
@@ -117,7 +124,7 @@ async function dispatch(
       const currentCacheControl = response.headers.get('Cache-Control');
       if (!currentCacheControl || currentCacheControl.includes('max-age=0') || currentCacheControl.includes('no-cache')) {
         const headers = new Headers(response.headers);
-        headers.set('Cache-Control', 'public, max-age=604800, s-maxage=604800, immutable');
+        headers.set('Cache-Control', `public, max-age=${ttl}, s-maxage=${ttl}, immutable`);
         return new Response(response.body, {
           status: response.status,
           statusText: response.statusText,

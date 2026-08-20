@@ -47,10 +47,15 @@ static_section_vars="$(jq -c '
   | from_entries
 ' "${CONFIG_FILE}")"
 
+static_cache_ttl="$(jq -r '.spec.serverless.frontend_router.static_cache_ttl // "604800"' "${CONFIG_FILE}")"
+public_cache_ttl="$(jq -r '.spec.serverless.frontend_router.public_cache_ttl // "3600"' "${CONFIG_FILE}")"
+
 jq -n \
   --arg name "${worker_name}" \
   --arg pages_origin "${pages_origin}" \
   --arg api_origin "${api_origin}" \
+  --arg static_cache_ttl "${static_cache_ttl}" \
+  --arg public_cache_ttl "${public_cache_ttl}" \
   --arg api_auth "$(jq -er '.spec.serverless.frontend_router.bindings.api_auth' "${CONFIG_FILE}")" \
   --argjson static_sections "${static_section_vars}" \
   --arg auth "$(jq -er '.spec.serverless.frontend_router.bindings.auth' "${CONFIG_FILE}")" \
@@ -65,7 +70,9 @@ jq -n \
     compatibility_flags: ["nodejs_compat"],
     vars: ({
       PAGES_ORIGIN: $pages_origin,
-      API_ORIGIN: $api_origin
+      API_ORIGIN: $api_origin,
+      STATIC_CACHE_TTL: ($static_cache_ttl | tostring),
+      PUBLIC_CACHE_TTL: ($public_cache_ttl | tostring)
     } + $static_sections),
     services: [
       {binding: "API_AUTH", service: $api_auth},

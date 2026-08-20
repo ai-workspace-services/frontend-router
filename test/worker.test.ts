@@ -152,4 +152,25 @@ describe('frontend-router worker', () => {
       fetchSpy.mockRestore();
     }
   });
+
+  it('respects custom STATIC_CACHE_TTL configured via GitOps / environment variables', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('css data', {
+        status: 200,
+        headers: { 'Cache-Control': 'public, max-age=0' },
+      }),
+    );
+    try {
+      const response = await worker.fetch(
+        new Request('https://console.example.test/_next/static/css/app.css'),
+        env({ STATIC_CACHE_TTL: '86400' }),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Cache-Control')).toBe('public, max-age=86400, s-maxage=86400, immutable');
+      expect(response.headers.get('X-Frontend-Route')).toBe('static');
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
 });
