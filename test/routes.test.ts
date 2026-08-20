@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isStaticAsset, routeForPath } from '../src/routes';
+import { isStaticAsset, routeForPath, staticSectionForPath } from '../src/routes';
 
 describe('frontend route table', () => {
   it.each([
@@ -31,5 +31,31 @@ describe('frontend route table', () => {
   it('does not classify ordinary page paths as static assets', () => {
     expect(isStaticAsset('/products/xconnect')).toBe(false);
     expect(isStaticAsset('/download')).toBe(false);
+  });
+});
+
+describe('static content sections', () => {
+  it.each([
+    ['/blogs', 'blogs'],
+    ['/blogs/edge-routing', 'blogs'],
+    ['/docs', 'docs'],
+    ['/docs/01-console/overview', 'docs'],
+    ['/products', 'products'],
+    ['/products/xconnect', 'products'],
+    ['/support', 'support'],
+    ['/support/discussions', 'support'],
+  ] as const)('maps %s to the %s section', (pathname, expected) => {
+    expect(staticSectionForPath(pathname)).toBe(expected);
+  });
+
+  it.each([
+    '/download',
+    '/panel/account',
+    '/about',
+    '/blogsomething',
+    '/api/docs/search',
+    '/_edge/content/_next/static/chunks/app.js',
+  ])('leaves %s outside every section', (pathname) => {
+    expect(staticSectionForPath(pathname)).toBeUndefined();
   });
 });

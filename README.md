@@ -15,6 +15,22 @@
 | Workspace pages | `SSR_WORKSPACE` Service Binding |
 | Other UI pages | `SSR_PUBLIC` Service Binding |
 
+## Statically published content sections
+
+`/blogs`, `/docs`, `/products` and `/support` can each be served from a prebuilt
+static site instead of their SSR boundary. A section is redirected there only
+when its origin is configured, through GitOps
+`spec.serverless.frontend_router.static_sections.<section>`:
+
+| Declaration | Result |
+| --- | --- |
+| absent or empty | the section stays on its SSR boundary — this is the rollback |
+| the shared Pages origin | served from the shared static site |
+| a section-specific Pages origin | that section is published on its own cadence, independently of the others and of the main site |
+
+The sections are prefix-matched, so a declared section takes every path beneath
+it. Publish the section before declaring its origin.
+
 The complete environment and migration contract is documented in [Console Frontend Router 与 Edge Gateway 目标架构及实施计划](https://github.com/ai-workspace-services/knowledge/blob/main/docs/zh/frontend-edge-routing-target-architecture.md).
 
 ## Local development

@@ -33,6 +33,38 @@ describe('frontend-router worker', () => {
     expect(forwarded.headers.get('X-Forwarded-Host')).toBe('console.example.test');
   });
 
+  it('keeps a content section on its SSR boundary until an origin is configured', async () => {
+    const runtime = env();
+    const response = await worker.fetch(new Request('https://console.example.test/blogs/edge-routing'), runtime);
+
+    expect(await response.text()).toBe('content');
+    expect(response.headers.get('X-Frontend-Route')).toBe('ssr-content');
+  });
+
+  it('serves a configured content section from its own static origin', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('static blogs'));
+    try {
+      const runtime = env({ PAGES_ORIGIN_BLOGS: 'https://blogs.pages.dev' });
+      const response = await worker.fetch(new Request('https://console.example.test/blogs/edge-routing'), runtime);
+
+      expect(await response.text()).toBe('static blogs');
+      expect(response.headers.get('X-Frontend-Route')).toBe('static');
+      expect(runtime.SSR_CONTENT?.fetch).not.toHaveBeenCalled();
+      const forwarded = fetchSpy.mock.calls[0][0] as Request;
+      expect(forwarded.url).toBe('https://blogs.pages.dev/blogs/edge-routing');
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('leaves the other sections alone when one is published statically', async () => {
+    const runtime = env({ PAGES_ORIGIN_BLOGS: 'https://blogs.pages.dev' });
+    const response = await worker.fetch(new Request('https://console.example.test/docs/01-console/overview'), runtime);
+
+    expect(await response.text()).toBe('content');
+    expect(response.headers.get('X-Frontend-Route')).toBe('ssr-content');
+  });
+
   it('sends boundary-prefixed build assets back to the owning SSR binding', async () => {
     const runtime = env();
     const response = await worker.fetch(

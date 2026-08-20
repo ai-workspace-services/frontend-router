@@ -6,6 +6,15 @@ export interface Env {
   PAGES_ORIGIN?: string;
   API_ORIGIN?: string;
   API_AUTH?: WorkerServiceBinding;
+  // One origin per content section. A section is served from its origin only
+  // when the origin is set, so an unset variable keeps the section on its SSR
+  // boundary — that is both the rollout switch and the rollback. Pointing two
+  // sections at different Pages projects is what lets them be published
+  // independently of each other and of the main site.
+  PAGES_ORIGIN_BLOGS?: string;
+  PAGES_ORIGIN_DOCS?: string;
+  PAGES_ORIGIN_PRODUCTS?: string;
+  PAGES_ORIGIN_SUPPORT?: string;
   SSR_AUTH?: WorkerServiceBinding;
   SSR_CONTENT?: WorkerServiceBinding;
   SSR_CONSOLE?: WorkerServiceBinding;
