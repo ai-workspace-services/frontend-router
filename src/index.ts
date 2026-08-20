@@ -109,7 +109,7 @@ async function dispatch(
     const response = await fetch(originRequest, {
       cf: {
         cacheEverything: true,
-        cacheTtl: 31536000,
+        cacheTtl: 604800,
       },
     } as RequestInit);
 
@@ -117,7 +117,7 @@ async function dispatch(
       const currentCacheControl = response.headers.get('Cache-Control');
       if (!currentCacheControl || currentCacheControl.includes('max-age=0') || currentCacheControl.includes('no-cache')) {
         const headers = new Headers(response.headers);
-        headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+        headers.set('Cache-Control', 'public, max-age=604800, s-maxage=604800, immutable');
         return new Response(response.body, {
           status: response.status,
           statusText: response.statusText,

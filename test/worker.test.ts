@@ -146,7 +146,7 @@ describe('frontend-router worker', () => {
       );
 
       expect(response.status).toBe(200);
-      expect(response.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+      expect(response.headers.get('Cache-Control')).toBe('public, max-age=604800, s-maxage=604800, immutable');
       expect(response.headers.get('X-Frontend-Route')).toBe('static');
     } finally {
       fetchSpy.mockRestore();
