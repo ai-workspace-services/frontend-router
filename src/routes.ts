@@ -9,6 +9,10 @@ const AUTH_PREFIXES = ['/login', '/register', '/email-verification', '/logout'] 
 // not the identity-page SSR Worker. Keep these ahead of the generic /api/*
 // route so a Console request reaches the auth gateway service binding.
 const AUTH_API_PREFIXES = ['/api/auth', '/api/v1/auth'] as const;
+// These Portal BFF endpoints must reach the auth SSR Worker: they translate
+// browser cookies into the Accounts MFA API contract and manage MFA cookies.
+// They are intentionally more specific than AUTH_API_PREFIXES below.
+const MFA_BFF_PREFIX = '/api/auth/mfa';
 const CONTENT_PREFIXES = ['/blogs', '/docs', '/download'] as const;
 const CONSOLE_PREFIXES = ['/panel', '/dashboard'] as const;
 const WORKSPACE_PREFIXES = ['/ai-workspace', '/cloud_iac', '/editor', '/support', '/xworkmate'] as const;
@@ -63,6 +67,7 @@ export function staticSectionForPath(pathname: string): StaticSection | undefine
 export function routeForPath(pathname: string): FrontendRoute {
   const boundaryRoute = BOUNDARY_ASSET_ROUTES.find(([prefix]) => matchesPrefix(pathname, prefix));
   if (boundaryRoute) return boundaryRoute[1];
+  if (matchesPrefix(pathname, MFA_BFF_PREFIX)) return 'ssr-auth';
   if (matchesAnyPrefix(pathname, AUTH_API_PREFIXES)) return 'api-auth';
   if (isStaticAsset(pathname)) return 'static';
   if (matchesPrefix(pathname, '/api')) return 'api';
