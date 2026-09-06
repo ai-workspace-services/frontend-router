@@ -174,3 +174,63 @@ describe('frontend-router worker', () => {
     }
   });
 });
+
+describe('homepage-only domains', () => {
+  const website = { WEBSITE_HOSTS: 'xworktech.com,www.xworktech.com', PLATFORM_ORIGIN: 'https://svc.plus' };
+
+  for (const host of ['xworktech.com', 'www.xworktech.com']) {
+    it(`serves the homepage on ${host}`, async () => {
+      const runtime = env(website);
+      const response = await worker.fetch(new Request(`https://${host}/?lang=zh`), runtime);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Location')).toBeNull();
+      expect(runtime.SSR_PUBLIC?.fetch).toHaveBeenCalledOnce();
+    });
+    for (const path of ['/login', '/ai-workspace?entry=trial', '/panel', '/docs', '/api/auth/session', '/_edge/auth/login', '//evil.example/path']) {
+      it(`sends ${host}${path} to the platform`, async () => {
+        const runtime = env(website);
+        const response = await worker.fetch(new Request(`https://${host}${path}`), runtime);
+        expect(response.status).toBe(302);
+        expect(response.headers.get('Location')).toBe(`https://svc.plus${path}`);
+        expect(runtime.API_AUTH?.fetch).not.toHaveBeenCalled();
+        expect(runtime.SSR_AUTH?.fetch).not.toHaveBeenCalled();
+        expect(runtime.SSR_PUBLIC?.fetch).not.toHaveBeenCalled();
+      });
+    }
+  }
+  it('retains homepage boundary assets', async () => {
+    const runtime = env(website);
+    const response = await worker.fetch(new Request('https://www.xworktech.com/_edge/public/_next/static/app.js'), runtime);
+    expect(response.status).toBe(200);
+    expect(runtime.SSR_PUBLIC?.fetch).toHaveBeenCalledOnce();
+  });
+  it('retains homepage marketing images', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('image'));
+    try {
+      const response = await worker.fetch(new Request('https://www.xworktech.com/marketing/home-editions/web-zh.png'), env(website));
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Location')).toBeNull();
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+  it('does not send API mutations or Server Actions to the platform', async () => {
+    for (const path of ['/', '/api/auth/login', '/panel']) {
+      const runtime = env(website);
+      const response = await worker.fetch(new Request(`https://www.xworktech.com${path}`, { method: 'POST', body: '{}' }), runtime);
+      expect(response.status).toBe(421);
+      expect(runtime.API_AUTH?.fetch).not.toHaveBeenCalled();
+      expect(runtime.SSR_PUBLIC?.fetch).not.toHaveBeenCalled();
+    }
+  });
+  it('leaves platform dispatch unchanged', async () => {
+    const runtime = env(website);
+    const response = await worker.fetch(new Request('https://svc.plus/panel'), runtime);
+    expect(response.status).toBe(200);
+    expect(runtime.SSR_CONSOLE?.fetch).toHaveBeenCalledOnce();
+  });
+  it('fails closed when the platform origin is missing', async () => {
+    const response = await worker.fetch(new Request('https://www.xworktech.com/login'), env({ ...website, PLATFORM_ORIGIN: '' }));
+    expect(response.status).toBe(500);
+  });
+});

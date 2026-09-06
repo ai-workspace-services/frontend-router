@@ -156,6 +156,34 @@ export default {
     const url = new URL(request.url);
     const { pathname } = url;
 
+    const websiteHosts = (env.WEBSITE_HOSTS || '').split(',').map(host => host.trim().toLowerCase());
+    if (websiteHosts.includes(url.hostname.toLowerCase())) {
+      // The brand domains own only the homepage and its build assets. Never
+      // dispatch platform pages, API calls, or Server Actions on these hosts.
+      const assetPath = pathname.replace(/^\/_edge\/public(?=\/)/, '');
+      const isHomepageAsset = /^(?:\/_next\/(?:static\/|image$)|\/(?:assets|static|icons|images|fonts|marketing)\/)/.test(assetPath)
+        || ['/favicon.ico', '/robots.txt', '/sitemap.xml'].includes(pathname);
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return jsonError('Use the platform origin for non-read requests', 421, requestId);
+      }
+      if (pathname !== '/' && !isHomepageAsset) {
+        let platform: URL;
+        try {
+          platform = new URL(env.PLATFORM_ORIGIN || '');
+          if (platform.protocol !== 'https:' || platform.username || platform.password
+              || websiteHosts.includes(platform.hostname)) throw new Error('Invalid platform origin');
+        } catch {
+          return jsonError('Platform origin is not configured correctly', 500, requestId);
+        }
+        // Assign path/search separately: //evil.example must remain a path.
+        platform.pathname = pathname;
+        platform.search = url.search;
+        return new Response(null, { status: 302, headers: {
+          Location: platform.toString(), 'Cache-Control': 'no-store', 'X-Request-Id': requestId,
+        } });
+      }
+    }
+
     if (pathname === '/dashboard' || pathname === '/dashboard/') {
       url.pathname = '/panel';
       return Response.redirect(url.toString(), 301);

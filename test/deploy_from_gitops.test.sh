@@ -16,6 +16,7 @@ cat >"${test_dir}/routing.json" <<'EOF'
       "console_host": "console-cloudflare-uat.onwalk.net",
       "frontend_router": {
         "worker_name": "frontend-router-uat",
+        "website": {"hosts": ["xworktech.com", "www.xworktech.com"], "platform_origin": "https://svc.plus"},
         "host": "console-cloudflare-uat.onwalk.net",
         "pages_origin": "https://ai-workspace-portal-uat.pages.dev",
         "api_origin": "https://accounts-cloudflare-uat.onwalk.net",
@@ -64,6 +65,8 @@ jq -e '
   .name == "frontend-router-uat"
   and .vars.PAGES_ORIGIN == "https://ai-workspace-portal-uat.pages.dev"
   and .vars.API_ORIGIN == "https://accounts-cloudflare-uat.onwalk.net"
+  and .vars.WEBSITE_HOSTS == "xworktech.com,www.xworktech.com"
+  and .vars.PLATFORM_ORIGIN == "https://svc.plus"
   and .vars.STATIC_CACHE_TTL == "604800"
   and .vars.PUBLIC_CACHE_TTL == "3600"
   and ([.services[].binding] | sort) == ["API_AUTH", "SSR_AUTH", "SSR_CONSOLE", "SSR_CONTENT", "SSR_PUBLIC", "SSR_WORKSPACE"]

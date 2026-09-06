@@ -52,6 +52,8 @@ public_cache_ttl="$(jq -r '.spec.serverless.frontend_router.public_cache_ttl // 
 
 jq -n \
   --arg name "${worker_name}" \
+  --arg website_hosts "$(jq -r '(.spec.serverless.frontend_router.website.hosts // []) | join(",")' "${CONFIG_FILE}")" \
+  --arg platform_origin "$(jq -r '.spec.serverless.frontend_router.website.platform_origin // empty' "${CONFIG_FILE}")" \
   --arg pages_origin "${pages_origin}" \
   --arg api_origin "${api_origin}" \
   --arg static_cache_ttl "${static_cache_ttl}" \
@@ -69,6 +71,8 @@ jq -n \
     compatibility_date: "2026-08-18",
     compatibility_flags: ["nodejs_compat"],
     vars: ({
+      WEBSITE_HOSTS: $website_hosts,
+      PLATFORM_ORIGIN: $platform_origin,
       PAGES_ORIGIN: $pages_origin,
       API_ORIGIN: $api_origin,
       STATIC_CACHE_TTL: ($static_cache_ttl | tostring),
