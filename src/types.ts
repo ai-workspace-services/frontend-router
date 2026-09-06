@@ -3,6 +3,8 @@ export interface WorkerServiceBinding {
 }
 
 export interface Env {
+  WEBSITE_HOSTS?: string;
+  PLATFORM_ORIGIN?: string;
   PAGES_ORIGIN?: string;
   API_ORIGIN?: string;
   STATIC_CACHE_TTL?: string;

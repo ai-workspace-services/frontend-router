@@ -54,3 +54,14 @@ attach a Custom Domain; `platform-ops-toolkit` owns that later reconciliation st
 ## Deployment boundary
 
 Do not manually attach `console.svc.plus` to this Worker before the GitOps frontend-router contract and UAT canary are ready. Pages currently owns the Console custom domain; the migration must first deploy this Worker to a temporary UAT hostname and verify the static, SSR, API, and Cookie acceptance matrix.
+
+## Homepage-only brand domains
+
+GitOps `frontend_router.website.hosts` declares homepage-only domains, rendered
+as `WEBSITE_HOSTS`. They serve `/` and homepage assets in place. Other GET/HEAD
+paths redirect to `website.platform_origin` (`PLATFORM_ORIGIN`) with the path
+and query preserved. Non-read requests return 421 without reaching a service
+binding, so login/API mutations must be submitted directly to the platform.
+The production contract uses xworktech.com and www.xworktech.com for the homepage,
+and https://svc.plus for platform navigation. Unconfigured environments retain
+the existing full frontend dispatch.
