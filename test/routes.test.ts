@@ -14,6 +14,8 @@ describe('frontend route table', () => {
     ['/_edge/workspace/_next/static/chunks/app.css', 'ssr-workspace'],
     ['/api/auth/login', 'api-auth'],
     ['/api/v1/auth/session', 'api-auth'],
+    ['/api/auth/token/exchange', 'ssr-auth'],
+    ['/api/auth/token/exchange/extra', 'api-auth'],
     ['/api/v1/docs/pages/guide', 'api'],
     ['/login', 'ssr-auth'],
     ['/register/complete', 'ssr-auth'],
