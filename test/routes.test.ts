@@ -23,6 +23,8 @@ describe('frontend route table', () => {
     ['/api/auth/session', 'ssr-auth'],
     ['/api/agent-server/v1/nodes', 'ssr-console'],
     ['/api/agent/nodes', 'ssr-console'],
+    ['/api/account/policy', 'ssr-console'],
+    ['/api/account/usage/summary', 'ssr-console'],
     ['/api/v1/docs/pages/guide', 'api'],
     ['/login', 'ssr-auth'],
     ['/register/complete', 'ssr-auth'],
