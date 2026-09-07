@@ -25,6 +25,11 @@ const PORTAL_BFF_AUTH_PATHS = ['/api/auth/token/exchange', '/api/auth/session'] 
 // a false `session token is invalid or expired` response for an otherwise
 // authenticated Console session.
 const PORTAL_BFF_AGENT_PATHS = ['/api/agent-server/v1/nodes', '/api/agent/nodes'] as const;
+// Account usage, policy, and readiness reads are also Portal BFF handlers.
+// They resolve the browser's HttpOnly session cookie before calling Accounts;
+// sending them to the generic API origin makes an authenticated Console
+// request look like an anonymous request to Accounts.
+const PORTAL_BFF_ACCOUNT_PATHS = ['/api/account'] as const;
 const CONTENT_PREFIXES = ['/blogs', '/docs', '/download'] as const;
 const CONSOLE_PREFIXES = ['/panel', '/dashboard'] as const;
 const WORKSPACE_PREFIXES = ['/ai-workspace', '/cloud_iac', '/editor', '/support', '/xworkmate'] as const;
@@ -84,6 +89,9 @@ export function routeForPath(pathname: string): FrontendRoute {
     return 'ssr-auth';
   }
   if (PORTAL_BFF_AGENT_PATHS.some((path) => matchesPrefix(pathname, path))) {
+    return 'ssr-console';
+  }
+  if (PORTAL_BFF_ACCOUNT_PATHS.some((path) => matchesPrefix(pathname, path))) {
     return 'ssr-console';
   }
   if (matchesAnyPrefix(pathname, AUTH_API_PREFIXES)) return 'api-auth';
