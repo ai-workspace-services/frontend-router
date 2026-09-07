@@ -10,13 +10,15 @@ const AUTH_PREFIXES = ['/login', '/register', '/email-verification', '/logout'] 
 // route so a Console request reaches the auth gateway service binding.
 const AUTH_API_PREFIXES = ['/api/auth', '/api/v1/auth'] as const;
 // These Portal BFF endpoints must reach the auth SSR Worker. They convert the
-// Accounts response into browser cookies instead of exposing a session token.
+// Accounts response into browser cookies or a same-origin normalized session
+// response instead of making the browser depend on the raw Accounts contract.
 const MFA_BFF_PREFIX = '/api/auth/mfa';
-// Token exchange is intentionally served by the Portal BFF. It converts the
-// Accounts response into the Console's HttpOnly session cookie; sending this
-// request directly to Accounts would return a token to the browser without
-// setting that cookie, so the subsequent /panel request would be unauthenticated.
-const PORTAL_BFF_AUTH_PATHS = ['/api/auth/token/exchange'] as const;
+// Token exchange and session lookup are intentionally served by the Portal BFF.
+// Exchange converts the Accounts response into the Console's HttpOnly session
+// cookie; session lookup converts the opaque cookie into the normalized Portal
+// user response. Keeping both same-origin avoids leaking either backend
+// contract into the browser boundary.
+const PORTAL_BFF_AUTH_PATHS = ['/api/auth/token/exchange', '/api/auth/session'] as const;
 const CONTENT_PREFIXES = ['/blogs', '/docs', '/download'] as const;
 const CONSOLE_PREFIXES = ['/panel', '/dashboard'] as const;
 const WORKSPACE_PREFIXES = ['/ai-workspace', '/cloud_iac', '/editor', '/support', '/xworkmate'] as const;
