@@ -9,10 +9,14 @@ const AUTH_PREFIXES = ['/login', '/register', '/email-verification', '/logout'] 
 // not the identity-page SSR Worker. Keep these ahead of the generic /api/*
 // route so a Console request reaches the auth gateway service binding.
 const AUTH_API_PREFIXES = ['/api/auth', '/api/v1/auth'] as const;
-// These Portal BFF endpoints must reach the auth SSR Worker: they translate
-// browser cookies into the Accounts MFA API contract and manage MFA cookies.
-// They are intentionally more specific than AUTH_API_PREFIXES below.
+// These Portal BFF endpoints must reach the auth SSR Worker. They convert the
+// Accounts response into browser cookies instead of exposing a session token.
 const MFA_BFF_PREFIX = '/api/auth/mfa';
+// Token exchange is intentionally served by the Portal BFF. It converts the
+// Accounts response into the Console's HttpOnly session cookie; sending this
+// request directly to Accounts would return a token to the browser without
+// setting that cookie, so the subsequent /panel request would be unauthenticated.
+const PORTAL_BFF_AUTH_PATHS = ['/api/auth/token/exchange'] as const;
 const CONTENT_PREFIXES = ['/blogs', '/docs', '/download'] as const;
 const CONSOLE_PREFIXES = ['/panel', '/dashboard'] as const;
 const WORKSPACE_PREFIXES = ['/ai-workspace', '/cloud_iac', '/editor', '/support', '/xworkmate'] as const;
@@ -68,6 +72,9 @@ export function routeForPath(pathname: string): FrontendRoute {
   const boundaryRoute = BOUNDARY_ASSET_ROUTES.find(([prefix]) => matchesPrefix(pathname, prefix));
   if (boundaryRoute) return boundaryRoute[1];
   if (matchesPrefix(pathname, MFA_BFF_PREFIX)) return 'ssr-auth';
+  if (PORTAL_BFF_AUTH_PATHS.some((path) => path === pathname)) {
+    return 'ssr-auth';
+  }
   if (matchesAnyPrefix(pathname, AUTH_API_PREFIXES)) return 'api-auth';
   if (isStaticAsset(pathname)) return 'static';
   if (matchesPrefix(pathname, '/api')) return 'api';
