@@ -19,6 +19,12 @@ const MFA_BFF_PREFIX = '/api/auth/mfa';
 // user response. Keeping both same-origin avoids leaking either backend
 // contract into the browser boundary.
 const PORTAL_BFF_AUTH_PATHS = ['/api/auth/token/exchange', '/api/auth/session'] as const;
+// User-facing agent discovery also belongs to the Portal BFF. It translates
+// the browser's HttpOnly account cookie into an explicit session header before
+// calling Accounts; routing these paths to the generic API origin can produce
+// a false `session token is invalid or expired` response for an otherwise
+// authenticated Console session.
+const PORTAL_BFF_AGENT_PATHS = ['/api/agent-server/v1/nodes', '/api/agent/nodes'] as const;
 const CONTENT_PREFIXES = ['/blogs', '/docs', '/download'] as const;
 const CONSOLE_PREFIXES = ['/panel', '/dashboard'] as const;
 const WORKSPACE_PREFIXES = ['/ai-workspace', '/cloud_iac', '/editor', '/support', '/xworkmate'] as const;
@@ -76,6 +82,9 @@ export function routeForPath(pathname: string): FrontendRoute {
   if (matchesPrefix(pathname, MFA_BFF_PREFIX)) return 'ssr-auth';
   if (PORTAL_BFF_AUTH_PATHS.some((path) => path === pathname)) {
     return 'ssr-auth';
+  }
+  if (PORTAL_BFF_AGENT_PATHS.some((path) => matchesPrefix(pathname, path))) {
+    return 'ssr-console';
   }
   if (matchesAnyPrefix(pathname, AUTH_API_PREFIXES)) return 'api-auth';
   if (isStaticAsset(pathname)) return 'static';
