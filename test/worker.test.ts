@@ -91,6 +91,61 @@ describe('frontend-router worker', () => {
     expect(forwarded.headers.get('X-Frontend-Route')).toBe('api-auth');
   });
 
+  it.each([
+    ['GET', '/api/xconnect-zero/overview'],
+    ['GET', '/api/xconnect-zero/networks'],
+    ['GET', '/api/xconnect-zero/devices'],
+    ['GET', '/api/xconnect-zero/invites'],
+    ['POST', '/api/xconnect-zero/networks/bootstrap'],
+    ['POST', '/api/xconnect-zero/invites'],
+    ['POST', '/api/xconnect-zero/devices/device-123/revoke'],
+    ['PUT', '/api/xconnect-zero/networks/network-123/policy'],
+  ] as const)('dispatches XConnect Zero BFF %s %s through the Console SSR binding', async (method, path) => {
+    const runtime = env();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('generic API origin must not be called'));
+    try {
+      const response = await worker.fetch(
+        new Request(`https://console.example.test${path}`, {
+          method,
+          headers: { Cookie: 'xc_session=opaque-session' },
+          body: method === 'GET' ? undefined : '{}',
+        }),
+        runtime,
+      );
+
+      expect(await response.text()).toBe('console');
+      expect(response.headers.get('X-Frontend-Route')).toBe('ssr-console');
+      expect(runtime.SSR_CONSOLE?.fetch).toHaveBeenCalledOnce();
+      expect(fetchSpy).not.toHaveBeenCalled();
+      const forwarded = vi.mocked(runtime.SSR_CONSOLE!.fetch).mock.calls[0][0];
+      expect(forwarded.url).toBe(`https://console.example.test${path}`);
+      expect(forwarded.headers.get('Cookie')).toBe('xc_session=opaque-session');
+      expect(forwarded.headers.get('X-Forwarded-Host')).toBe('console.example.test');
+      expect(forwarded.headers.get('X-Frontend-Route')).toBe('ssr-console');
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('keeps a similarly named non-BFF API path on the generic Accounts origin', async () => {
+    const runtime = env();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('gateway'));
+    try {
+      const response = await worker.fetch(
+        new Request('https://console.example.test/api/xconnect-zeroevil/overview'),
+        runtime,
+      );
+
+      expect(await response.text()).toBe('gateway');
+      expect(response.headers.get('X-Frontend-Route')).toBe('api');
+      expect(runtime.SSR_CONSOLE?.fetch).not.toHaveBeenCalled();
+      const forwarded = fetchSpy.mock.calls[0][0] as Request;
+      expect(forwarded.url).toBe('https://accounts.example.test/api/xconnect-zeroevil/overview');
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it('returns a configuration error when the auth gateway binding is missing', async () => {
     const response = await worker.fetch(
       new Request('https://console.example.test/api/auth/login'),
