@@ -2,6 +2,12 @@
 set -euo pipefail
 
 CONFIG_FILE="${FRONTEND_ROUTER_CONFIG_FILE:-${CLOUDFLARE_BOUNDARY_CONFIG:-}}"
+artifact_file="${FRONTEND_ROUTER_ARTIFACT_FILE:-}"
+
+if [[ "${artifact_file}" != /* || "${artifact_file}" != *.js || ! -f "${artifact_file}" ]]; then
+  echo "FRONTEND_ROUTER_ARTIFACT_FILE must be an absolute path to an existing .js file" >&2
+  exit 2
+fi
 
 : "${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN is required}"
 : "${CLOUDFLARE_ACCOUNT_ID:?CLOUDFLARE_ACCOUNT_ID is required}"
@@ -52,6 +58,7 @@ public_cache_ttl="$(jq -r '.spec.serverless.frontend_router.public_cache_ttl // 
 
 jq -n \
   --arg name "${worker_name}" \
+  --arg artifact_file "${artifact_file}" \
   --arg website_hosts "$(jq -r '(.spec.serverless.frontend_router.website.hosts // []) | join(",")' "${CONFIG_FILE}")" \
   --arg platform_origin "$(jq -r '.spec.serverless.frontend_router.website.platform_origin // empty' "${CONFIG_FILE}")" \
   --arg pages_origin "${pages_origin}" \
@@ -67,7 +74,7 @@ jq -n \
   --arg public "$(jq -er '.spec.serverless.frontend_router.bindings.public' "${CONFIG_FILE}")" \
   '{
     name: $name,
-    main: "src/index.ts",
+    main: $artifact_file,
     compatibility_date: "2026-08-18",
     compatibility_flags: ["nodejs_compat"],
     vars: ({
@@ -90,4 +97,4 @@ jq -n \
   }' >"${generated_config}"
 
 echo "==> Deploying ${worker_name}; Custom Domain reconciliation is owned by platform-ops-toolkit."
-npx wrangler deploy --config "${generated_config}"
+npx wrangler deploy --config "${generated_config}" --no-bundle

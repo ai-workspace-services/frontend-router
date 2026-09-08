@@ -6,6 +6,9 @@ test_dir="$(mktemp -d)"
 trap 'rm -rf "${test_dir}"' EXIT
 
 mkdir -p "${test_dir}/bin"
+artifact_file="${test_dir}/frontend-router-worker.js"
+printf '%s\n' 'export default { fetch() { return new Response("artifact"); } };' >"${artifact_file}"
+printf '%s\n' '{"schema_version":1,"tag":"daily-build-test","source_sha":"deadbeef"}' >"${test_dir}/release-metadata.json"
 cat >"${test_dir}/routing.json" <<'EOF'
 {
   "kind": "EdgeRoutingConfig",
@@ -48,6 +51,7 @@ set -euo pipefail
 test "$1" = "wrangler"
 test "$2" = "deploy"
 test "$3" = "--config"
+test "$5" = "--no-bundle"
 cp "$4" "${MOCK_WRANGLER_CONFIG}"
 EOF
 chmod +x "${test_dir}/bin/npx"
@@ -58,11 +62,13 @@ MOCK_WRANGLER_CONFIG="${test_dir}/wrangler.json" \
 CLOUDFLARE_API_TOKEN="test-token" \
 CLOUDFLARE_ACCOUNT_ID="account-1" \
 FRONTEND_ROUTER_CONFIG_FILE="${test_dir}/routing.json" \
+FRONTEND_ROUTER_ARTIFACT_FILE="${artifact_file}" \
 ./scripts/deploy_from_gitops.sh >/dev/null
 popd >/dev/null
 
-jq -e '
+jq -e --arg artifact_file "${artifact_file}" '
   .name == "frontend-router-uat"
+  and .main == $artifact_file
   and .vars.PAGES_ORIGIN == "https://ai-workspace-portal-uat.pages.dev"
   and .vars.API_ORIGIN == "https://accounts-cloudflare-uat.onwalk.net"
   and .vars.WEBSITE_HOSTS == "xworktech.com,www.xworktech.com"
@@ -70,6 +76,13 @@ jq -e '
   and .vars.STATIC_CACHE_TTL == "604800"
   and .vars.PUBLIC_CACHE_TTL == "3600"
   and ([.services[].binding] | sort) == ["API_AUTH", "SSR_AUTH", "SSR_CONSOLE", "SSR_CONTENT", "SSR_PUBLIC", "SSR_WORKSPACE"]
+' "${test_dir}/wrangler.json" >/dev/null
+
+# Release metadata is a download-time verification asset, not Wrangler config
+# scope. The deploy script must consume only the bundled JavaScript artifact.
+jq -e '
+  (has("release-metadata.json") | not)
+  and (has("release_metadata") | not)
 ' "${test_dir}/wrangler.json" >/dev/null
 
 # A declared section becomes its own origin var; sections may point at different
