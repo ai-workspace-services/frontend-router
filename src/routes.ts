@@ -13,12 +13,20 @@ const AUTH_API_PREFIXES = ['/api/auth', '/api/v1/auth'] as const;
 // Accounts response into browser cookies or a same-origin normalized session
 // response instead of making the browser depend on the raw Accounts contract.
 const MFA_BFF_PREFIX = '/api/auth/mfa';
-// Token exchange and session lookup are intentionally served by the Portal BFF.
-// Exchange converts the Accounts response into the Console's HttpOnly session
-// cookie; session lookup converts the opaque cookie into the normalized Portal
-// user response. Keeping both same-origin avoids leaking either backend
-// contract into the browser boundary.
-const PORTAL_BFF_AUTH_PATHS = ['/api/auth/token/exchange', '/api/auth/session'] as const;
+// Browser-facing account flows are intentionally served by the Portal BFF.
+// In particular, login exchanges an Accounts token for the Console's HttpOnly
+// session cookie. Sending it straight to API_AUTH leaves the browser without
+// xc_session, so the subsequent /panel navigation is redirected back to login.
+const PORTAL_BFF_AUTH_PATHS = [
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/register/send',
+  '/api/auth/register/verify',
+  '/api/auth/verify-email',
+  '/api/auth/verify-email/send',
+  '/api/auth/token/exchange',
+  '/api/auth/session',
+] as const;
 // User-facing agent discovery also belongs to the Portal BFF. It translates
 // the browser's HttpOnly account cookie into an explicit session header before
 // calling Accounts; routing these paths to the generic API origin can produce
