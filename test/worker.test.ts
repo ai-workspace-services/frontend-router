@@ -77,18 +77,18 @@ describe('frontend-router worker', () => {
     expect(runtime.SSR_PUBLIC?.fetch).toHaveBeenCalledOnce();
   });
 
-  it('dispatches Console auth API requests to the Accounts auth gateway binding', async () => {
+  it('dispatches browser login through the Portal auth BFF', async () => {
     const runtime = env();
     const response = await worker.fetch(
       new Request('https://console.example.test/api/auth/login', { method: 'POST', body: '{}' }),
       runtime,
     );
 
-    expect(await response.text()).toBe('api-auth');
-    expect(response.headers.get('X-Frontend-Route')).toBe('api-auth');
-    expect(runtime.API_AUTH?.fetch).toHaveBeenCalledOnce();
-    const forwarded = vi.mocked(runtime.API_AUTH!.fetch).mock.calls[0][0];
-    expect(forwarded.headers.get('X-Frontend-Route')).toBe('api-auth');
+    expect(await response.text()).toBe('auth');
+    expect(response.headers.get('X-Frontend-Route')).toBe('ssr-auth');
+    expect(runtime.SSR_AUTH?.fetch).toHaveBeenCalledOnce();
+    const forwarded = vi.mocked(runtime.SSR_AUTH!.fetch).mock.calls[0][0];
+    expect(forwarded.headers.get('X-Frontend-Route')).toBe('ssr-auth');
   });
 
   it.each([
@@ -146,14 +146,26 @@ describe('frontend-router worker', () => {
     }
   });
 
-  it('returns a configuration error when the auth gateway binding is missing', async () => {
+  it('returns a configuration error when the Portal auth BFF binding is missing', async () => {
     const response = await worker.fetch(
       new Request('https://console.example.test/api/auth/login'),
-      env({ API_AUTH: undefined }),
+      env({ SSR_AUTH: undefined }),
     );
 
     expect(response.status).toBe(500);
-    expect(await response.json()).toMatchObject({ error: 'API auth binding is not configured' });
+    expect(await response.json()).toMatchObject({ error: 'Service binding for ssr-auth is not configured' });
+  });
+
+  it('keeps versioned Accounts auth APIs on the auth gateway binding', async () => {
+    const runtime = env();
+    const response = await worker.fetch(
+      new Request('https://console.example.test/api/v1/auth/session'),
+      runtime,
+    );
+
+    expect(await response.text()).toBe('api-auth');
+    expect(response.headers.get('X-Frontend-Route')).toBe('api-auth');
+    expect(runtime.API_AUTH?.fetch).toHaveBeenCalledOnce();
   });
 
   it('proxies non-auth API requests through the configured Accounts gateway origin', async () => {
