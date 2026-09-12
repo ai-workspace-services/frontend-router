@@ -2,6 +2,7 @@ import { routeForPath, staticSectionForPath, type StaticSection } from './routes
 import type { Env, FrontendRoute, WorkerServiceBinding } from './types';
 
 const HOP_BY_HOP_HEADERS = ['connection', 'content-length', 'host', 'keep-alive', 'transfer-encoding'];
+const PUBLIC_WEBSITE_PATHS = new Set(['/about', '/privacy', '/terms', '/contact', '/support']);
 
 function jsonError(message: string, status: number, requestId: string): Response {
   return new Response(JSON.stringify({ error: message, request_id: requestId }), {
@@ -158,15 +159,18 @@ export default {
 
     const websiteHosts = (env.WEBSITE_HOSTS || '').split(',').map(host => host.trim().toLowerCase());
     if (websiteHosts.includes(url.hostname.toLowerCase())) {
-      // The brand domains own only the homepage and its build assets. Never
+      // The brand domains own the homepage, public legal/contact pages, and
+      // their build assets. Never
       // dispatch platform pages, API calls, or Server Actions on these hosts.
       const assetPath = pathname.replace(/^\/_edge\/public(?=\/)/, '');
       const isHomepageAsset = /^(?:\/_next\/(?:static\/|image$)|\/(?:assets|static|icons|images|fonts|marketing)\/)/.test(assetPath)
         || ['/favicon.ico', '/robots.txt', '/sitemap.xml'].includes(pathname);
+      const normalizedPath = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+      const isPublicWebsitePath = PUBLIC_WEBSITE_PATHS.has(normalizedPath);
       if (request.method !== 'GET' && request.method !== 'HEAD') {
         return jsonError('Use the platform origin for non-read requests', 421, requestId);
       }
-      if (pathname !== '/' && !isHomepageAsset) {
+      if (pathname !== '/' && !isHomepageAsset && !isPublicWebsitePath) {
         let platform: URL;
         try {
           platform = new URL(env.PLATFORM_ORIGIN || '');

@@ -175,7 +175,7 @@ describe('frontend-router worker', () => {
   });
 });
 
-describe('homepage-only domains', () => {
+describe('brand domains', () => {
   const website = { WEBSITE_HOSTS: 'xworktech.com,www.xworktech.com', PLATFORM_ORIGIN: 'https://svc.plus' };
 
   for (const host of ['xworktech.com', 'www.xworktech.com']) {
@@ -186,6 +186,16 @@ describe('homepage-only domains', () => {
       expect(response.headers.get('Location')).toBeNull();
       expect(runtime.SSR_PUBLIC?.fetch).toHaveBeenCalledOnce();
     });
+    for (const path of ['/about', '/privacy', '/terms', '/contact', '/support', '/privacy/']) {
+      it(`serves ${host}${path} on the brand domain`, async () => {
+        const runtime = env(website);
+        const response = await worker.fetch(new Request(`https://${host}${path}`), runtime);
+        expect(response.status).toBe(200);
+        expect(response.headers.get('Location')).toBeNull();
+        const expectedBinding = path.startsWith('/support') ? runtime.SSR_WORKSPACE : runtime.SSR_PUBLIC;
+        expect(expectedBinding?.fetch).toHaveBeenCalledOnce();
+      });
+    }
     for (const path of ['/login', '/ai-workspace?entry=trial', '/panel', '/docs', '/api/auth/session', '/_edge/auth/login', '//evil.example/path']) {
       it(`sends ${host}${path} to the platform`, async () => {
         const runtime = env(website);
