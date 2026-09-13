@@ -263,6 +263,31 @@ describe('brand domains', () => {
         expect(expectedBinding?.fetch).toHaveBeenCalledOnce();
       });
     }
+    it(`serves crawler metadata on ${host} from the brand domain`, async () => {
+      const runtime = env(website);
+      const robots = await worker.fetch(new Request(`https://${host}/robots.txt`), runtime);
+      const sitemap = await worker.fetch(new Request(`https://${host}/sitemap.xml`), runtime);
+
+      expect(robots.status).toBe(200);
+      expect(robots.headers.get('Content-Type')).toContain('text/plain');
+      expect(robots.headers.get('Location')).toBeNull();
+      expect(await robots.text()).toContain(`Sitemap: https://${host}/sitemap.xml`);
+
+      expect(sitemap.status).toBe(200);
+      expect(sitemap.headers.get('Content-Type')).toContain('application/xml');
+      expect(sitemap.headers.get('Location')).toBeNull();
+      expect(await sitemap.text()).toContain(`<loc>https://${host}/privacy</loc>`);
+      expect(runtime.SSR_PUBLIC?.fetch).not.toHaveBeenCalled();
+      expect(runtime.SSR_WORKSPACE?.fetch).not.toHaveBeenCalled();
+    });
+    it(`supports metadata HEAD requests on ${host}`, async () => {
+      const runtime = env(website);
+      const response = await worker.fetch(new Request(`https://${host}/sitemap.xml`, { method: 'HEAD' }), runtime);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toContain('application/xml');
+      expect(await response.text()).toBe('');
+    });
     for (const path of ['/login', '/ai-workspace?entry=trial', '/panel', '/docs', '/api/auth/session', '/_edge/auth/login', '//evil.example/path']) {
       it(`sends ${host}${path} to the platform`, async () => {
         const runtime = env(website);
