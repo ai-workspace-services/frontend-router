@@ -3,6 +3,7 @@ import type { Env, FrontendRoute, WorkerServiceBinding } from './types';
 
 const HOP_BY_HOP_HEADERS = ['connection', 'content-length', 'host', 'keep-alive', 'transfer-encoding'];
 const PUBLIC_WEBSITE_PATHS = new Set(['/about', '/privacy', '/terms', '/contact', '/support']);
+const PUBLIC_WEBSITE_SITEMAP_PATHS = ['/', '/about', '/privacy', '/terms', '/contact', '/support'];
 
 function jsonError(message: string, status: number, requestId: string): Response {
   return new Response(JSON.stringify({ error: message, request_id: requestId }), {
@@ -62,6 +63,32 @@ function responseWithRouteHeaders(response: Response, route: FrontendRoute, requ
   headers.set('X-Frontend-Route', route);
   headers.set('X-Request-Id', requestId);
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
+function publicWebsiteDocumentResponse(request: Request, url: URL): Response | undefined {
+  let body: string;
+  let contentType: string;
+
+  if (url.pathname === '/robots.txt') {
+    body = `User-agent: *\nAllow: /\nSitemap: ${url.origin}/sitemap.xml\n`;
+    contentType = 'text/plain; charset=utf-8';
+  } else if (url.pathname === '/sitemap.xml') {
+    const entries = PUBLIC_WEBSITE_SITEMAP_PATHS
+      .map((path) => `  <url><loc>${url.origin}${path}</loc></url>`)
+      .join('\n');
+    body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`;
+    contentType = 'application/xml; charset=utf-8';
+  } else {
+    return undefined;
+  }
+
+  return new Response(request.method === 'HEAD' ? null : body, {
+    headers: {
+      'Cache-Control': 'public, max-age=300, s-maxage=3600',
+      'Content-Type': contentType,
+      'X-Robots-Tag': 'all',
+    },
+  });
 }
 
 function bindingForRoute(env: Env, route: FrontendRoute): WorkerServiceBinding | undefined {
@@ -169,6 +196,10 @@ export default {
       const isPublicWebsitePath = PUBLIC_WEBSITE_PATHS.has(normalizedPath);
       if (request.method !== 'GET' && request.method !== 'HEAD') {
         return jsonError('Use the platform origin for non-read requests', 421, requestId);
+      }
+      const publicWebsiteDocument = publicWebsiteDocumentResponse(request, url);
+      if (publicWebsiteDocument) {
+        return responseWithRouteHeaders(publicWebsiteDocument, 'static', requestId);
       }
       if (pathname !== '/' && !isHomepageAsset && !isPublicWebsitePath) {
         let platform: URL;

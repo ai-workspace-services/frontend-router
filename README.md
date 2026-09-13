@@ -58,8 +58,10 @@ Do not manually attach `console.svc.plus` to this Worker before the GitOps front
 ## Brand domains
 
 GitOps `frontend_router.website.hosts` declares homepage-only domains, rendered
-as `WEBSITE_HOSTS`. They serve `/`, public legal/contact pages, and homepage assets in place. Other GET/HEAD
-paths redirect to `website.platform_origin` (`PLATFORM_ORIGIN`) with the path
+as `WEBSITE_HOSTS`. They serve `/`, public legal/contact pages, homepage assets, and
+brand-specific `/robots.txt` and `/sitemap.xml` in place. The generated sitemap only
+lists the homepage and the public legal/support pages for the requested brand host.
+Other GET/HEAD paths redirect to `website.platform_origin` (`PLATFORM_ORIGIN`) with the path
 and query preserved. Non-read requests return 421 without reaching a service
 binding, so login/API mutations must be submitted directly to the platform.
 The production contract uses xworktech.com and www.xworktech.com for the homepage,
