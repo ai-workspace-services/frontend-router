@@ -33,6 +33,16 @@ describe('frontend-router worker', () => {
     expect(forwarded.headers.get('X-Forwarded-Host')).toBe('console.example.test');
   });
 
+  it('serves crawler metadata on a console alias', async () => {
+    const runtime = env();
+    const response = await worker.fetch(new Request('https://console.onwalk.net/sitemap.xml'), runtime);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('application/xml');
+    expect(await response.text()).toContain('<loc>https://console.onwalk.net/privacy</loc>');
+    expect(runtime.SSR_PUBLIC?.fetch).not.toHaveBeenCalled();
+  });
+
   it('keeps a content section on its SSR boundary until an origin is configured', async () => {
     const runtime = env();
     const response = await worker.fetch(new Request('https://console.example.test/blogs/edge-routing'), runtime);

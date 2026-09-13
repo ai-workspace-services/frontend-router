@@ -184,6 +184,16 @@ export default {
     const url = new URL(request.url);
     const { pathname } = url;
 
+    // Crawler metadata belongs to every public frontend host, including the
+    // console aliases. Keep it same-origin so an auditor never follows a
+    // stale Pages or platform sitemap.
+    if ((pathname === '/robots.txt' || pathname === '/sitemap.xml') && (request.method === 'GET' || request.method === 'HEAD')) {
+      const publicWebsiteDocument = publicWebsiteDocumentResponse(request, url);
+      if (publicWebsiteDocument) {
+        return responseWithRouteHeaders(publicWebsiteDocument, 'static', requestId);
+      }
+    }
+
     const websiteHosts = (env.WEBSITE_HOSTS || '').split(',').map(host => host.trim().toLowerCase());
     if (websiteHosts.includes(url.hostname.toLowerCase())) {
       // The brand domains own the homepage, public legal/contact pages, and
