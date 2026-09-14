@@ -39,6 +39,7 @@ describe('frontend route table', () => {
     ['/api/xconnect-zero/devices/device-123/revoke', 'ssr-console'],
     ['/api/xconnect-zero/networks/network-123/policy', 'ssr-console'],
     ['/api/xconnect-zeroevil/overview', 'api'],
+    ['/api/global-mesh/nodes', 'ssr-public'],
     ['/api/v1/docs/pages/guide', 'api'],
     ['/login', 'ssr-auth'],
     ['/register/complete', 'ssr-auth'],

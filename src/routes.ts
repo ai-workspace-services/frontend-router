@@ -38,10 +38,11 @@ const PORTAL_BFF_AGENT_PATHS = ['/api/agent-server/v1/nodes', '/api/agent/nodes'
 // sending them to the generic API origin makes an authenticated Console
 // request look like an anonymous request to Accounts.
 const PORTAL_BFF_ACCOUNT_PATHS = ['/api/account'] as const;
-// XConnect Zero management reads and writes are Portal BFF handlers. They
-// resolve the browser's HttpOnly session cookie before calling Accounts, so
-// keep them on the Console SSR boundary instead of the generic API origin.
 const PORTAL_BFF_XCONNECT_ZERO_PATHS = ['/api/xconnect-zero'] as const;
+// Global Mesh dynamic node catalog and telemetry probes belong to the public
+// portal boundary. Keep them on the public SSR boundary so anonymous storefront
+// visitors and console mesh panels read live probe stats without Accounts Bearer auth.
+const PORTAL_BFF_GLOBAL_MESH_PATHS = ['/api/global-mesh'] as const;
 const CONTENT_PREFIXES = ['/blogs', '/docs', '/download'] as const;
 const CONSOLE_PREFIXES = ['/panel', '/dashboard'] as const;
 const WORKSPACE_PREFIXES = ['/ai-workspace', '/cloud_iac', '/editor', '/support', '/xworkmate'] as const;
@@ -108,6 +109,9 @@ export function routeForPath(pathname: string): FrontendRoute {
   }
   if (PORTAL_BFF_XCONNECT_ZERO_PATHS.some((path) => matchesPrefix(pathname, path))) {
     return 'ssr-console';
+  }
+  if (PORTAL_BFF_GLOBAL_MESH_PATHS.some((path) => matchesPrefix(pathname, path))) {
+    return 'ssr-public';
   }
   if (matchesAnyPrefix(pathname, AUTH_API_PREFIXES)) return 'api-auth';
   if (isStaticAsset(pathname)) return 'static';
