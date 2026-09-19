@@ -2,8 +2,42 @@ import { routeForPath, staticSectionForPath, type StaticSection } from './routes
 import type { Env, FrontendRoute, WorkerServiceBinding } from './types';
 
 const HOP_BY_HOP_HEADERS = ['connection', 'content-length', 'host', 'keep-alive', 'transfer-encoding'];
-const PUBLIC_WEBSITE_PATHS = new Set(['/about', '/privacy', '/terms', '/contact', '/support']);
-const PUBLIC_WEBSITE_SITEMAP_PATHS = ['/', '/about', '/privacy', '/terms', '/contact', '/support'];
+// Brand domains render every public page themselves. Only account flows and
+// APIs stay on the platform origin: their cookies, OAuth callbacks, and CORS
+// allow-lists are bound to the platform hosts.
+const PLATFORM_ONLY_PREFIXES = [
+  '/login',
+  '/register',
+  '/email-verification',
+  '/logout',
+  '/panel',
+  '/dashboard',
+  '/api',
+  '/_edge/auth',
+  '/_edge/console',
+] as const;
+const PUBLIC_WEBSITE_SITEMAP_PATHS = [
+  '/',
+  '/about',
+  '/company',
+  '/contact',
+  '/privacy',
+  '/terms',
+  '/support',
+  '/products/xworkmate',
+  '/products/xconnect',
+  '/products/ai-workspace',
+  '/products/open-platform',
+  '/products/global-mesh',
+  '/prices',
+  '/download',
+  '/docs',
+  '/blogs',
+];
+
+function isPlatformOnlyPath(pathname: string): boolean {
+  return PLATFORM_ONLY_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
 
 function jsonError(message: string, status: number, requestId: string): Response {
   return new Response(JSON.stringify({ error: message, request_id: requestId }), {
@@ -196,14 +230,8 @@ export default {
 
     const websiteHosts = (env.WEBSITE_HOSTS || '').split(',').map(host => host.trim().toLowerCase());
     if (websiteHosts.includes(url.hostname.toLowerCase())) {
-      // The brand domains own the homepage, public legal/contact pages, and
-      // their build assets. Never
-      // dispatch platform pages, API calls, or Server Actions on these hosts.
-      const assetPath = pathname.replace(/^\/_edge\/public(?=\/)/, '');
-      const isHomepageAsset = /^(?:\/_next\/(?:static\/|image$)|\/(?:assets|static|icons|images|fonts|marketing)\/)/.test(assetPath)
-        || ['/favicon.ico', '/robots.txt', '/sitemap.xml'].includes(pathname);
-      const normalizedPath = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
-      const isPublicWebsitePath = PUBLIC_WEBSITE_PATHS.has(normalizedPath);
+      // The brand domains own every public page and its build assets. Never
+      // dispatch account pages, API calls, or Server Actions on these hosts.
       if (request.method !== 'GET' && request.method !== 'HEAD') {
         return jsonError('Use the platform origin for non-read requests', 421, requestId);
       }
@@ -211,7 +239,7 @@ export default {
       if (publicWebsiteDocument) {
         return responseWithRouteHeaders(publicWebsiteDocument, 'static', requestId);
       }
-      if (pathname !== '/' && !isHomepageAsset && !isPublicWebsitePath) {
+      if (isPlatformOnlyPath(pathname)) {
         let platform: URL;
         try {
           platform = new URL(env.PLATFORM_ORIGIN || '');
