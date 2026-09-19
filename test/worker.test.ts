@@ -298,7 +298,38 @@ describe('brand domains', () => {
       expect(response.headers.get('Content-Type')).toContain('application/xml');
       expect(await response.text()).toBe('');
     });
-    for (const path of ['/login', '/ai-workspace?entry=trial', '/panel', '/docs', '/api/auth/session', '/_edge/auth/login', '//evil.example/path']) {
+    // Company verification reviewers follow product links from the brand
+    // homepage; every public page must render on the brand domain itself.
+    for (const [path, binding] of [
+      ['/products/xworkmate', 'SSR_PUBLIC'],
+      ['/products/xconnect', 'SSR_PUBLIC'],
+      ['/prices', 'SSR_PUBLIC'],
+      ['/company', 'SSR_PUBLIC'],
+      ['/docs', 'SSR_CONTENT'],
+      ['/blogs/some-post', 'SSR_CONTENT'],
+      ['/download', 'SSR_CONTENT'],
+      ['/support/discussions', 'SSR_WORKSPACE'],
+      ['/ai-workspace?entry=trial', 'SSR_WORKSPACE'],
+      ['/xworkmate', 'SSR_WORKSPACE'],
+    ] as const) {
+      it(`serves public page ${host}${path} on the brand domain`, async () => {
+        const runtime = env(website);
+        const response = await worker.fetch(new Request(`https://${host}${path}`), runtime);
+        expect(response.status).toBe(200);
+        expect(response.headers.get('Location')).toBeNull();
+        expect(runtime[binding]?.fetch).toHaveBeenCalledOnce();
+      });
+    }
+    it(`does not turn a protocol-relative path on ${host} into an off-site redirect`, async () => {
+      const runtime = env(website);
+      const response = await worker.fetch(new Request(`https://${host}//evil.example/path`), runtime);
+      expect(response.headers.get('Location')).toBeNull();
+    });
+    it(`lists public product pages in the ${host} sitemap`, async () => {
+      const response = await worker.fetch(new Request(`https://${host}/sitemap.xml`), env(website));
+      expect(await response.text()).toContain(`<loc>https://${host}/products/xworkmate</loc>`);
+    });
+    for (const path of ['/login', '/register', '/panel', '/panel/billing', '/dashboard', '/api/auth/session', '/_edge/auth/login', '/_edge/console/app.js']) {
       it(`sends ${host}${path} to the platform`, async () => {
         const runtime = env(website);
         const response = await worker.fetch(new Request(`https://${host}${path}`), runtime);
