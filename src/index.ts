@@ -2,9 +2,10 @@ import { routeForPath, staticSectionForPath, type StaticSection } from './routes
 import type { Env, FrontendRoute, WorkerServiceBinding } from './types';
 
 const HOP_BY_HOP_HEADERS = ['connection', 'content-length', 'host', 'keep-alive', 'transfer-encoding'];
-// Brand domains render every public page themselves. Only account flows and
-// APIs stay on the platform origin: their cookies, OAuth callbacks, and CORS
-// allow-lists are bound to the platform hosts.
+// Brand domains render every public page themselves. Account flows, the
+// online workspace apps, and APIs stay on the platform origin: their cookies,
+// OAuth callbacks, same-origin /api/* calls, and CORS allow-lists are bound to
+// the platform hosts.
 const PLATFORM_ONLY_PREFIXES = [
   '/login',
   '/register',
@@ -12,6 +13,10 @@ const PLATFORM_ONLY_PREFIXES = [
   '/logout',
   '/panel',
   '/dashboard',
+  '/ai-workspace',
+  '/xworkmate',
+  '/cloud_iac',
+  '/editor',
   '/api',
   '/_edge/auth',
   '/_edge/console',
