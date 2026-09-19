@@ -309,8 +309,6 @@ describe('brand domains', () => {
       ['/blogs/some-post', 'SSR_CONTENT'],
       ['/download', 'SSR_CONTENT'],
       ['/support/discussions', 'SSR_WORKSPACE'],
-      ['/ai-workspace?entry=trial', 'SSR_WORKSPACE'],
-      ['/xworkmate', 'SSR_WORKSPACE'],
     ] as const) {
       it(`serves public page ${host}${path} on the brand domain`, async () => {
         const runtime = env(website);
@@ -329,7 +327,11 @@ describe('brand domains', () => {
       const response = await worker.fetch(new Request(`https://${host}/sitemap.xml`), env(website));
       expect(await response.text()).toContain(`<loc>https://${host}/products/xworkmate</loc>`);
     });
-    for (const path of ['/login', '/register', '/panel', '/panel/billing', '/dashboard', '/api/auth/session', '/_edge/auth/login', '/_edge/console/app.js']) {
+    // The online workspace apps call same-origin /api/* from the browser, so
+    // they stay on the platform origin with the account flows. The
+    // platform-ops-toolkit public-chain verifier locks /login and
+    // /ai-workspace?entry=trial to this redirect.
+    for (const path of ['/login', '/register', '/panel', '/panel/billing', '/dashboard', '/ai-workspace?entry=trial', '/xworkmate', '/cloud_iac', '/editor', '/api/auth/session', '/_edge/auth/login', '/_edge/console/app.js']) {
       it(`sends ${host}${path} to the platform`, async () => {
         const runtime = env(website);
         const response = await worker.fetch(new Request(`https://${host}${path}`), runtime);
