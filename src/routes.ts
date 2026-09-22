@@ -43,6 +43,9 @@ const PORTAL_BFF_XCONNECT_ZERO_PATHS = ['/api/xconnect-zero'] as const;
 // portal boundary. Keep them on the public SSR boundary so anonymous storefront
 // visitors and console mesh panels read live probe stats without Accounts Bearer auth.
 const PORTAL_BFF_GLOBAL_MESH_PATHS = ['/api/global-mesh'] as const;
+// Public workspace entry points use same-origin trial/session APIs. Keep them
+// with the workspace SSR boundary so brand-domain trial links remain usable.
+const PORTAL_BFF_WORKSPACE_PATHS = ['/api/ai-workspace', '/api/xworkmate'] as const;
 const CONTENT_PREFIXES = ['/blogs', '/docs', '/download'] as const;
 const CONSOLE_PREFIXES = ['/panel', '/dashboard'] as const;
 const WORKSPACE_PREFIXES = ['/ai-workspace', '/cloud_iac', '/editor', '/support', '/xworkmate'] as const;
@@ -112,6 +115,9 @@ export function routeForPath(pathname: string): FrontendRoute {
   }
   if (PORTAL_BFF_GLOBAL_MESH_PATHS.some((path) => matchesPrefix(pathname, path))) {
     return 'ssr-public';
+  }
+  if (PORTAL_BFF_WORKSPACE_PATHS.some((path) => matchesPrefix(pathname, path))) {
+    return 'ssr-workspace';
   }
   if (matchesAnyPrefix(pathname, AUTH_API_PREFIXES)) return 'api-auth';
   if (isStaticAsset(pathname)) return 'static';
