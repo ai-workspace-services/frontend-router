@@ -327,11 +327,10 @@ describe('brand domains', () => {
       const response = await worker.fetch(new Request(`https://${host}/sitemap.xml`), env(website));
       expect(await response.text()).toContain(`<loc>https://${host}/products/xworkmate</loc>`);
     });
-    // The online workspace apps call same-origin /api/* from the browser, so
-    // they stay on the platform origin with the account flows. The
-    // platform-ops-toolkit public-chain verifier locks /login and
-    // /ai-workspace?entry=trial to this redirect.
-    for (const path of ['/login', '/register', '/panel', '/panel/billing', '/dashboard', '/ai-workspace?entry=trial', '/xworkmate', '/cloud_iac', '/editor', '/api/auth/session', '/_edge/auth/login', '/_edge/console/app.js']) {
+    // Account flows, private panels, APIs, and boundary assets stay on the
+    // platform origin. Public workspace services must remain on the brand
+    // domain, including the anonymous Free entry.
+    for (const path of ['/login', '/register', '/panel', '/panel/billing', '/dashboard', '/api/auth/session', '/_edge/auth/login', '/_edge/console/app.js']) {
       it(`sends ${host}${path} to the platform`, async () => {
         const runtime = env(website);
         const response = await worker.fetch(new Request(`https://${host}${path}`), runtime);
@@ -340,6 +339,15 @@ describe('brand domains', () => {
         expect(runtime.API_AUTH?.fetch).not.toHaveBeenCalled();
         expect(runtime.SSR_AUTH?.fetch).not.toHaveBeenCalled();
         expect(runtime.SSR_PUBLIC?.fetch).not.toHaveBeenCalled();
+      });
+    }
+    for (const path of ['/ai-workspace', '/xworkmate', '/cloud_iac', '/editor']) {
+      it(`keeps public service ${host}${path} on the brand domain`, async () => {
+        const runtime = env(website);
+        const response = await worker.fetch(new Request(`https://${host}${path}`), runtime);
+        expect(response.status).toBe(200);
+        expect(response.headers.get('Location')).toBeNull();
+        expect(runtime.SSR_WORKSPACE?.fetch).toHaveBeenCalledOnce();
       });
     }
   }
@@ -360,12 +368,21 @@ describe('brand domains', () => {
     }
   });
   it('does not send API mutations or Server Actions to the platform', async () => {
-    for (const path of ['/', '/api/auth/login', '/panel']) {
+    for (const path of ['/', '/api/auth/login', '/panel', '/api/openclaw/assistant']) {
       const runtime = env(website);
       const response = await worker.fetch(new Request(`https://www.xworktech.com${path}`, { method: 'POST', body: '{}' }), runtime);
       expect(response.status).toBe(421);
       expect(runtime.API_AUTH?.fetch).not.toHaveBeenCalled();
       expect(runtime.SSR_PUBLIC?.fetch).not.toHaveBeenCalled();
+    }
+  });
+  it('keeps public workspace APIs on the brand domain', async () => {
+    for (const path of ['/api/ai-workspace/free', '/api/xworkmate/bridge']) {
+      const runtime = env(website);
+      const response = await worker.fetch(new Request(`https://www.xworktech.com${path}`, { method: 'POST', body: '{}' }), runtime);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Location')).toBeNull();
+      expect(runtime.SSR_WORKSPACE?.fetch).toHaveBeenCalledOnce();
     }
   });
   it('leaves platform dispatch unchanged', async () => {
