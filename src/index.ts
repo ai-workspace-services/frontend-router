@@ -2,9 +2,10 @@ import { routeForPath, staticSectionForPath, type StaticSection } from './routes
 import type { Env, FrontendRoute, WorkerServiceBinding } from './types';
 
 const HOP_BY_HOP_HEADERS = ['connection', 'content-length', 'host', 'keep-alive', 'transfer-encoding'];
-// Brand domains render every public page themselves. Account flows and APIs
-// stay on the platform origin, while public workspace services remain on the
-// brand domain so their links do not fall through to a retired platform URL.
+// Brand domains render every public page themselves. Account flows, the
+// online workspace apps, and APIs stay on the platform origin: their cookies,
+// OAuth callbacks, same-origin /api/* calls, and CORS allow-lists are bound to
+// the platform hosts.
 const PLATFORM_ONLY_PREFIXES = [
   '/login',
   '/register',
@@ -12,11 +13,14 @@ const PLATFORM_ONLY_PREFIXES = [
   '/logout',
   '/panel',
   '/dashboard',
+  '/ai-workspace',
+  '/xworkmate',
+  '/cloud_iac',
+  '/editor',
   '/api',
   '/_edge/auth',
   '/_edge/console',
 ] as const;
-const PUBLIC_SERVICE_API_PREFIXES = ['/api/ai-workspace', '/api/xworkmate'] as const;
 const PUBLIC_WEBSITE_SITEMAP_PATHS = [
   '/',
   '/about',
@@ -37,14 +41,7 @@ const PUBLIC_WEBSITE_SITEMAP_PATHS = [
 ];
 
 function isPlatformOnlyPath(pathname: string): boolean {
-  if (isPublicServiceApiPath(pathname)) return false;
   return PLATFORM_ONLY_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-}
-
-function isPublicServiceApiPath(pathname: string): boolean {
-  return PUBLIC_SERVICE_API_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
 }
 
 function jsonError(message: string, status: number, requestId: string): Response {
@@ -240,7 +237,7 @@ export default {
     if (websiteHosts.includes(url.hostname.toLowerCase())) {
       // The brand domains own every public page and its build assets. Never
       // dispatch account pages, API calls, or Server Actions on these hosts.
-      if (request.method !== 'GET' && request.method !== 'HEAD' && !isPublicServiceApiPath(pathname)) {
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
         return jsonError('Use the platform origin for non-read requests', 421, requestId);
       }
       const publicWebsiteDocument = publicWebsiteDocumentResponse(request, url);
