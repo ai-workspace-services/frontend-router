@@ -32,7 +32,7 @@ const PORTAL_BFF_AUTH_PATHS = [
 // calling Accounts; routing these paths to the generic API origin can produce
 // a false `session token is invalid or expired` response for an otherwise
 // authenticated Console session.
-const PORTAL_BFF_AGENT_PATHS = ['/api/agent-server/v1/nodes', '/api/agent/nodes'] as const;
+const PORTAL_BFF_AGENT_PATHS = ['/api/agent-server/v1/nodes', '/api/agent-server/v1/regional-pools', '/api/agent/nodes'] as const;
 // Account usage, policy, and readiness reads are also Portal BFF handlers.
 // They resolve the browser's HttpOnly session cookie before calling Accounts;
 // sending them to the generic API origin makes an authenticated Console
