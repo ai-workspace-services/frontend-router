@@ -29,7 +29,7 @@ const PUBLIC_WEBSITE_SITEMAP_PATHS = [
   '/products/xconnect',
   '/products/ai-workspace',
   '/products/open-platform',
-  '/products/global-mesh',
+  '/products/cloud-hub',
   '/prices',
   '/download',
   '/docs',
