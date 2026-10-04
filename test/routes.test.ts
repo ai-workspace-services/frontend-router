@@ -86,3 +86,8 @@ describe('static content sections', () => {
     expect(staticSectionForPath(pathname)).toBeUndefined();
   });
 });
+
+it('routes only the fixed release evidence BFF to Console', () => {
+  expect(routeForPath('/api/operations/releases')).toBe('ssr-console');
+  expect(routeForPath('/api/operations/releases/dispatch')).toBe('api');
+});
