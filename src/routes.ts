@@ -107,7 +107,7 @@ export function routeForPath(pathname: string): FrontendRoute {
   if (PORTAL_BFF_AGENT_PATHS.some((path) => matchesPrefix(pathname, path))) {
     return 'ssr-console';
   }
-  if (pathname === '/api/operations/releases') return 'ssr-console';
+  if (['/api/operations/releases', '/api/operations/catalog', '/api/operations/plans', '/api/operations/mcp'].includes(pathname)) return 'ssr-console';
   if (PORTAL_BFF_ACCOUNT_PATHS.some((path) => matchesPrefix(pathname, path))) {
     return 'ssr-console';
   }

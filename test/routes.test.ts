@@ -3,6 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { isStaticAsset, routeForPath, staticSectionForPath } from '../src/routes';
 
 describe('frontend route table', () => {
+  it.each(['catalog', 'plans', 'mcp'])('routes only exact Operations %s endpoint to Console', (endpoint) => {
+    expect(routeForPath(`/api/operations/${endpoint}`)).toBe('ssr-console');
+    expect(routeForPath(`/api/operations/${endpoint}/extra`)).toBe('api');
+    expect(routeForPath(`/api/operations/${endpoint}evil`)).toBe('api');
+  });
+
+  it('does not allow future Operations execution or dispatch routes implicitly', () => {
+    expect(routeForPath('/api/operations/execute')).toBe('api');
+    expect(routeForPath('/api/operations/dispatch')).toBe('api');
+  });
   it.each([
     ['/_next/static/chunks/app.js', 'static'],
     ['/assets/logo.svg', 'static'],

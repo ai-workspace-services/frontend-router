@@ -102,6 +102,25 @@ describe('frontend-router worker', () => {
   });
 
   it.each([
+    ['GET', '/api/operations/catalog'],
+    ['POST', '/api/operations/plans'],
+    ['POST', '/api/operations/mcp'],
+  ] as const)('forwards Operations %s %s with its original auth and origin', async (method, path) => {
+    const runtime = env();
+    const response = await worker.fetch(new Request(`https://console.example.test${path}`, {
+      method,
+      headers: { Cookie: 'xc_session=opaque-session', Origin: 'https://console.example.test' },
+      body: method === 'POST' ? '{}' : undefined,
+    }), runtime);
+    expect(response.headers.get('X-Frontend-Route')).toBe('ssr-console');
+    expect(runtime.SSR_CONSOLE?.fetch).toHaveBeenCalledOnce();
+    const forwarded = vi.mocked(runtime.SSR_CONSOLE!.fetch).mock.calls[0][0];
+    expect(forwarded.url).toBe(`https://console.example.test${path}`);
+    expect(forwarded.headers.get('Cookie')).toBe('xc_session=opaque-session');
+    expect(forwarded.headers.get('Origin')).toBe('https://console.example.test');
+  });
+
+  it.each([
     ['GET', '/api/xconnect-zero/overview'],
     ['GET', '/api/xconnect-zero/networks'],
     ['GET', '/api/xconnect-zero/devices'],
