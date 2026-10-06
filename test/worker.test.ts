@@ -293,7 +293,7 @@ describe('brand domains', () => {
       });
     }
     it(`serves crawler metadata on ${host} from the brand domain`, async () => {
-      const runtime = env(website);
+      const runtime = env({ ...website, SSR_PUBLIC: binding(new Response(`<urlset><url><loc>https://${host}/privacy</loc></url></urlset>`, { headers: { 'Content-Type': 'application/xml' } })) });
       const robots = await worker.fetch(new Request(`https://${host}/robots.txt`), runtime);
       const sitemap = await worker.fetch(new Request(`https://${host}/sitemap.xml`), runtime);
 
@@ -306,11 +306,11 @@ describe('brand domains', () => {
       expect(sitemap.headers.get('Content-Type')).toContain('application/xml');
       expect(sitemap.headers.get('Location')).toBeNull();
       expect(await sitemap.text()).toContain(`<loc>https://${host}/privacy</loc>`);
-      expect(runtime.SSR_PUBLIC?.fetch).not.toHaveBeenCalled();
+      expect(runtime.SSR_PUBLIC?.fetch).toHaveBeenCalledOnce();
       expect(runtime.SSR_WORKSPACE?.fetch).not.toHaveBeenCalled();
     });
     it(`supports metadata HEAD requests on ${host}`, async () => {
-      const runtime = env(website);
+      const runtime = env({ ...website, SSR_PUBLIC: binding(new Response(null, { headers: { 'Content-Type': 'application/xml' } })) });
       const response = await worker.fetch(new Request(`https://${host}/sitemap.xml`, { method: 'HEAD' }), runtime);
 
       expect(response.status).toBe(200);
@@ -343,9 +343,22 @@ describe('brand domains', () => {
       expect(response.headers.get('Location')).toBeNull();
     });
     it(`lists public product pages in the ${host} sitemap`, async () => {
-      const response = await worker.fetch(new Request(`https://${host}/sitemap.xml`), env(website));
-      expect(await response.text()).toContain(`<loc>https://${host}/products/xworkmate</loc>`);
+      const xml = `<urlset><url><loc>https://${host}/products/xworkmate</loc></url><url><loc>https://${host}/blogs/new-post</loc></url></urlset>`;
+      const runtime = env({ ...website, SSR_PUBLIC: binding(new Response(xml, { headers: { 'Content-Type': 'application/xml' } })) });
+      const response = await worker.fetch(new Request(`https://${host}/sitemap.xml`), runtime);
+      expect(await response.text()).toBe(xml);
+      expect(runtime.SSR_PUBLIC?.fetch).toHaveBeenCalledOnce();
     });
+    for (const path of ['/llms.txt', '/llms-full.txt', '/products/xworkmate.md', '/products/xconnect.en.md']) {
+      it(`serves generated discovery ${host}${path} through the public build`, async () => {
+        const runtime = env({ ...website, PAGES_ORIGIN_PRODUCTS: 'https://old-products.example.test' });
+        const response = await worker.fetch(new Request(`https://${host}${path}`), runtime);
+        expect(response.status).toBe(200);
+        expect(runtime.SSR_PUBLIC?.fetch).toHaveBeenCalledOnce();
+        expect(response.headers.get('Location')).toBeNull();
+        if (path.endsWith('.md')) expect(response.headers.get('Content-Type')).toContain('text/markdown');
+      });
+    }
     // Account flows, private panels, APIs, and boundary assets stay on the
     // platform origin. Public workspace services must remain on the brand
     // domain, including the anonymous Free entry.
