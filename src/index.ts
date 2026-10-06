@@ -25,6 +25,7 @@ const PUBLIC_WEBSITE_SITEMAP_PATHS = [
   '/privacy',
   '/terms',
   '/support',
+  '/products',
   '/products/xworkmate',
   '/products/xconnect',
   '/products/ai-workspace',
@@ -225,6 +226,26 @@ export default {
     const requestId = requestIdFor(request);
     const url = new URL(request.url);
     const { pathname } = url;
+    const websiteHosts = (env.WEBSITE_HOSTS || '').split(',').map(host => host.trim().toLowerCase());
+    const isBrandHost = websiteHosts.includes(url.hostname.toLowerCase());
+    // Public discovery files belong to the Portal build, not the fixed edge
+    // sitemap or a separately configured legacy static products origin.
+    const isDiscoveryDocument = pathname === '/llms.txt' || pathname === '/llms-full.txt'
+      || /^\/products\/[a-z0-9-]+(?:\.en)?\.md$/.test(pathname)
+      || (isBrandHost && pathname === '/sitemap.xml');
+    if (isDiscoveryDocument && (request.method === 'GET' || request.method === 'HEAD')) {
+      try {
+        const upstream = await dispatch(request, env, 'ssr-public', requestId);
+        const headers = new Headers(upstream.headers);
+        if (upstream.ok && pathname.endsWith('.md')) headers.set('Content-Type', 'text/markdown; charset=utf-8');
+        return responseWithRouteHeaders(new Response(request.method === 'HEAD' ? null : upstream.body, {
+          status: upstream.status, statusText: upstream.statusText, headers,
+        }), 'ssr-public', requestId);
+      } catch (error) {
+        console.error('Public discovery upstream unavailable', error);
+        return jsonError('upstream_unreachable', 502, requestId);
+      }
+    }
 
     // Crawler metadata belongs to every public frontend host, including the
     // console aliases. Keep it same-origin so an auditor never follows a
@@ -236,7 +257,6 @@ export default {
       }
     }
 
-    const websiteHosts = (env.WEBSITE_HOSTS || '').split(',').map(host => host.trim().toLowerCase());
     if (websiteHosts.includes(url.hostname.toLowerCase())) {
       // The brand domains own every public page and its build assets. Never
       // dispatch account pages, API calls, or Server Actions on these hosts.
