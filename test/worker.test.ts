@@ -22,6 +22,19 @@ function env(overrides: Partial<Env> = {}): Env {
 }
 
 describe('frontend-router worker', () => {
+  it('keeps the referral BFF session and private response on Console', async () => {
+    const runtime = env({ SSR_CONSOLE: binding(new Response('{}', { headers: { 'Cache-Control': 'no-store' } })) });
+    const response = await worker.fetch(new Request('https://svc.plus/api/auth/referrals/settlements', {
+      method: 'POST', headers: { Cookie: 'xc_session=local-test-session', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currency: 'usd', idempotencyKey: 'local-test-request' }),
+    }), runtime);
+    expect(response.headers.get('X-Frontend-Route')).toBe('ssr-console');
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+    const forwarded = vi.mocked(runtime.SSR_CONSOLE!.fetch).mock.calls[0][0];
+    expect(forwarded.headers.get('Cookie')).toBe('xc_session=local-test-session');
+    expect(forwarded.method).toBe('POST');
+    expect(runtime.API_AUTH?.fetch).not.toHaveBeenCalled();
+  });
   it('dispatches a console route to its SSR binding', async () => {
     const runtime = env();
     const response = await worker.fetch(new Request('https://console.example.test/panel/account'), runtime);
@@ -39,7 +52,10 @@ describe('frontend-router worker', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toContain('application/xml');
-    expect(await response.text()).toContain('<loc>https://console.onwalk.net/privacy</loc>');
+    const sitemap = await response.text();
+    expect(sitemap).toContain('<loc>https://console.onwalk.net/privacy</loc>');
+    expect(sitemap).toContain('<loc>https://console.onwalk.net/referral</loc>');
+    expect(sitemap).not.toContain('<loc>https://console.onwalk.net/referrals</loc>');
     expect(runtime.SSR_PUBLIC?.fetch).not.toHaveBeenCalled();
   });
 
@@ -282,7 +298,7 @@ describe('brand domains', () => {
       expect(response.headers.get('Location')).toBeNull();
       expect(runtime.SSR_PUBLIC?.fetch).toHaveBeenCalledOnce();
     });
-    for (const path of ['/about', '/privacy', '/terms', '/contact', '/support', '/privacy/']) {
+    for (const path of ['/about', '/privacy', '/terms', '/contact', '/support', '/privacy/', '/referral']) {
       it(`serves ${host}${path} on the brand domain`, async () => {
         const runtime = env(website);
         const response = await worker.fetch(new Request(`https://${host}${path}`), runtime);
@@ -362,7 +378,7 @@ describe('brand domains', () => {
     // Account flows, private panels, APIs, and boundary assets stay on the
     // platform origin. Public workspace services must remain on the brand
     // domain, including the anonymous Free entry.
-    for (const path of ['/login', '/register', '/panel', '/panel/billing', '/dashboard', '/api/auth/session', '/_edge/auth/login', '/_edge/console/app.js']) {
+    for (const path of ['/login', '/register', '/panel', '/panel/billing', '/dashboard', '/referrals', '/api/auth/session', '/api/auth/referrals', '/_edge/auth/login', '/_edge/console/app.js']) {
       it(`sends ${host}${path} to the platform`, async () => {
         const runtime = env(website);
         const response = await worker.fetch(new Request(`https://${host}${path}`), runtime);
