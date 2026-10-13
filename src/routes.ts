@@ -38,6 +38,9 @@ const PORTAL_BFF_AGENT_PATHS = ['/api/agent-server/v1/nodes', '/api/agent-server
 // sending them to the generic API origin makes an authenticated Console
 // request look like an anonymous request to Accounts.
 const PORTAL_BFF_ACCOUNT_PATHS = ['/api/account'] as const;
+// Referral reads and settlement requests use the browser session cookie via
+// Portal's authenticated BFF, before the generic Accounts auth gateway.
+const PORTAL_BFF_REFERRAL_PATHS = ['/api/auth/referrals'] as const;
 const PORTAL_BFF_XCONNECT_ZERO_PATHS = ['/api/xconnect-zero'] as const;
 // Global Mesh dynamic node catalog and telemetry probes belong to the public
 // portal boundary. Keep them on the public SSR boundary so anonymous storefront
@@ -47,7 +50,7 @@ const PORTAL_BFF_GLOBAL_MESH_PATHS = ['/api/global-mesh'] as const;
 // with the workspace SSR boundary so brand-domain trial links remain usable.
 const PORTAL_BFF_WORKSPACE_PATHS = ['/api/ai-workspace', '/api/xworkmate'] as const;
 const CONTENT_PREFIXES = ['/blogs', '/docs', '/download'] as const;
-const CONSOLE_PREFIXES = ['/panel', '/dashboard'] as const;
+const CONSOLE_PREFIXES = ['/panel', '/dashboard', '/referrals'] as const;
 const WORKSPACE_PREFIXES = ['/ai-workspace', '/cloud_iac', '/editor', '/support', '/xworkmate'] as const;
 const BOUNDARY_ASSET_ROUTES: ReadonlyArray<readonly [string, FrontendRoute]> = [
   ['/_edge/auth', 'ssr-auth'],
@@ -109,6 +112,9 @@ export function routeForPath(pathname: string): FrontendRoute {
   }
   if (['/api/operations/releases', '/api/operations/catalog', '/api/operations/plans', '/api/operations/mcp'].includes(pathname)) return 'ssr-console';
   if (PORTAL_BFF_ACCOUNT_PATHS.some((path) => matchesPrefix(pathname, path))) {
+    return 'ssr-console';
+  }
+  if (PORTAL_BFF_REFERRAL_PATHS.some((path) => matchesPrefix(pathname, path))) {
     return 'ssr-console';
   }
   if (PORTAL_BFF_XCONNECT_ZERO_PATHS.some((path) => matchesPrefix(pathname, path))) {
