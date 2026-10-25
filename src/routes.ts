@@ -120,6 +120,8 @@ export function routeForPath(pathname: string): FrontendRoute {
   if (PORTAL_BFF_XCONNECT_ZERO_PATHS.some((path) => matchesPrefix(pathname, path))) {
     return 'ssr-console';
   }
+  // Anonymous activity dates/status are served by the public Portal BFF.
+  if (pathname === '/api/referrals/campaign') return 'ssr-public';
   if (PORTAL_BFF_GLOBAL_MESH_PATHS.some((path) => matchesPrefix(pathname, path))) {
     return 'ssr-public';
   }
